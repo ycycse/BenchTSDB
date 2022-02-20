@@ -8,6 +8,7 @@ import cn.edu.thu.reader.BasicReader;
 import cn.edu.thu.reader.GeolifeReader;
 import cn.edu.thu.reader.NOAAReader;
 import cn.edu.thu.reader.ReddReader;
+import cn.edu.thu.reader.SyntheticReader;
 import cn.edu.thu.reader.TDriveReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +46,9 @@ public class RealDatasetWriter implements Runnable {
         break;
       case "REDD":
         reader = new ReddReader(config, files);
+        break;
+      case "SYNTHETIC":
+        reader = new SyntheticReader(config);
         break;
       default:
         throw new RuntimeException(config.DATA_SET + " not supported");

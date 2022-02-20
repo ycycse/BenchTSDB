@@ -41,7 +41,8 @@ public class TsFileManager implements IDataBaseManager {
 
   public TsFileManager(Config config) {
     this.config = config;
-    this.filePath = config.FILE_PATH;
+    this.filePath =
+        "root.test" + File.separator + "0" + File.separator + "0" + File.separator + config.FILE_PATH;
   }
 
   public TsFileManager(Config config, int threadNum) {
@@ -60,6 +61,7 @@ public class TsFileManager implements IDataBaseManager {
       return;
     }
     File file = new File(filePath);
+    file.getParentFile().mkdirs();
     try {
       writer = new TsFileWriter(file);
       Map<String, MeasurementSchema> template = new HashMap<>();
@@ -140,7 +142,7 @@ public class TsFileManager implements IDataBaseManager {
 
     long start = System.nanoTime();
     try {
-      TsFileSequenceReader reader = new TsFileSequenceReader(config.FILE_PATH);
+      TsFileSequenceReader reader = new TsFileSequenceReader(filePath);
 
       ReadOnlyTsFile readTsFile = new ReadOnlyTsFile(reader);
       ArrayList<Path> paths = new ArrayList<>();
@@ -179,6 +181,7 @@ public class TsFileManager implements IDataBaseManager {
     } catch (IOException e) {
       e.printStackTrace();
     }
+    logger.info("Total file size: {}", new File(filePath).length() / (1024*1024.0));
     return System.nanoTime() - start;
   }
 }

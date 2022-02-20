@@ -23,6 +23,10 @@ public abstract class BasicReader {
   protected String currentFile;
   protected String currentDeviceId;
 
+  public BasicReader(Config config) {
+    this.config = config;
+  }
+
   public BasicReader(Config config, List<String> files) {
     this.config = config;
     this.files = files;

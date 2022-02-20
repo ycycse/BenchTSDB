@@ -68,6 +68,9 @@ public class MainLoad {
     }
 
     for (int i = 0; i < files.size(); i++) {
+      if (config.useSynthetic) {
+        break;
+      }
 
 //      if (i < config.BEGIN_FILE || i > config.END_FILE) {
 //        continue;
@@ -100,7 +103,8 @@ public class MainLoad {
       }
     }
 
-    logger.info("All done! Total records:{}, points:{}, time:{} ms, speed:{} ", statistics.recordNum,
+    logger.info("All done! Total records:{}, points:{}, time:{} ms, speed:{}",
+        statistics.recordNum,
         statistics.pointNum, (float)statistics.timeCost.get() / 1000_1000F, statistics.speed());
 
   }
