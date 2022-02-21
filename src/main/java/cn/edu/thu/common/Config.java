@@ -138,7 +138,6 @@ public class Config {
     if (!DATA_DIR.endsWith("/")) {
       DATA_DIR += "/";
     }
-    BATCH_SIZE = BATCH_SIZE / FIELDS.length;
     logger.info("use dataset: {}", DATA_SET);
   }
 

@@ -20,7 +20,7 @@ public class MainLoad {
 
   private static Logger logger = LoggerFactory.getLogger(MainLoad.class);
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws InterruptedException {
 
     if (args == null || args.length == 0) {
       args = new String[]{"conf/config.properties"};
@@ -101,6 +101,7 @@ public class MainLoad {
       if (executorService.isTerminated()) {
         allDown = true;
       }
+      Thread.sleep(1000);
     }
 
     logger.info("All done! Total records:{}, points:{}, time:{} ms, speed:{}",

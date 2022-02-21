@@ -30,6 +30,7 @@ public class SyntheticReader extends BasicReader {
   private int deviceCursor = 0;
   private int pointCursor = 0;
   private Random random = new Random(123456);
+  private List<Record> batch = new ArrayList<>(config.BATCH_SIZE);
 
   public SyntheticReader(Config config) {
     super(config);
@@ -42,11 +43,11 @@ public class SyntheticReader extends BasicReader {
 
   @Override
   public List<Record> nextBatch() {
-    List<Record> batch = new ArrayList<>(config.BATCH_SIZE);
+    batch.clear();
     String device = "root.device_" + deviceCursor;
-    List<Object> fields = new ArrayList<>(config.syntheticMeasurementNum);
+
     for (int i = 0; i < config.BATCH_SIZE && pointCursor < config.syntheticPointNum; i++) {
-      fields.clear();
+      List<Object> fields = new ArrayList<>(config.syntheticMeasurementNum);
       for (int j = 0; j < config.syntheticMeasurementNum; j++) {
         fields.add(random.nextDouble() < config.syntheticNullRatio ? null : random.nextDouble());
       }
