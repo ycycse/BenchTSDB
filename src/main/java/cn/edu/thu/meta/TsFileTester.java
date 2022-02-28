@@ -23,7 +23,7 @@ import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
+import org.apache.iotdb.tsfile.read.TsFileReader;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.expression.IExpression;
@@ -72,7 +72,7 @@ public class TsFileTester implements Tester {
         template.put("s" + i, schema);
         schemas.add(schema);
       }
-      writer.registerDeviceTemplate("device", template);
+      writer.registerSchemaTemplate("device", template, false);
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -120,7 +120,7 @@ public class TsFileTester implements Tester {
     try {
       TsFileSequenceReader reader = new TsFileSequenceReader("meta.tsfile");
 
-      ReadOnlyTsFile readTsFile = new ReadOnlyTsFile(reader);
+      TsFileReader readTsFile = new TsFileReader(reader);
       ArrayList<Path> paths = new ArrayList<>();
       paths.add(new Path("device", "s1"));
       IExpression filter = new SingleSeriesExpression(new Path("device.s1"),

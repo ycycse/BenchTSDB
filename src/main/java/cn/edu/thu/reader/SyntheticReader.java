@@ -31,9 +31,21 @@ public class SyntheticReader extends BasicReader {
   private int pointCursor = 0;
   private Random random = new Random(123456);
   private List<Record> batch = new ArrayList<>(config.BATCH_SIZE);
+  private String[] deviceNames = new String[config.BATCH_SIZE];
 
   public SyntheticReader(Config config) {
     super(config);
+    for (int i = 0; i < config.syntheticDeviceNum; i++) {
+      deviceNames[i] = "root.device_" + i;
+    }
+    for (int i = 0; i < config.BATCH_SIZE; i++) {
+      List<Object> fields = new ArrayList<>(config.syntheticMeasurementNum);
+      for (int j = 0; j < config.syntheticMeasurementNum; j++) {
+        fields.add(random.nextDouble() < config.syntheticNullRatio ? null : random.nextDouble());
+      }
+      Record record = new Record(0, "", fields);
+      batch.add(record);
+    }
   }
 
   @Override
@@ -43,22 +55,23 @@ public class SyntheticReader extends BasicReader {
 
   @Override
   public List<Record> nextBatch() {
-    batch.clear();
-    String device = "root.device_" + deviceCursor;
+    String device = deviceNames[deviceCursor];
 
-    for (int i = 0; i < config.BATCH_SIZE && pointCursor < config.syntheticPointNum; i++) {
-      List<Object> fields = new ArrayList<>(config.syntheticMeasurementNum);
+    int i = 0;
+    for (; i < config.BATCH_SIZE && pointCursor < config.syntheticPointNum; i++) {
+      Record record = batch.get(i);
+      record.tag = device;
+      record.timestamp = pointCursor++;
       for (int j = 0; j < config.syntheticMeasurementNum; j++) {
-        fields.add(random.nextDouble() < config.syntheticNullRatio ? null : random.nextDouble());
+        record.fields.set(j, random.nextDouble() < config.syntheticNullRatio ? null :
+          random.nextDouble());
       }
-      Record record = new Record(pointCursor++, device, fields);
-      batch.add(record);
     }
     if (pointCursor == config.syntheticPointNum) {
       deviceCursor ++;
       pointCursor = 0;
     }
-    return batch;
+    return batch.subList(0, i);
   }
 
   @Override

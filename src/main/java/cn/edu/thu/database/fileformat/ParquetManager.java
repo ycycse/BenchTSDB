@@ -149,8 +149,10 @@ public class ParquetManager implements IDataBaseManager {
         group.add(Config.TAG_NAME, record.tag);
       }
       for(int i = 0; i < config.FIELDS.length; i++) {
-        double floatV = (double) record.fields.get(i);
-        group.add(config.FIELDS[i], floatV);
+        if (record.fields.get(i) != null) {
+          double floatV = (double) record.fields.get(i);
+          group.add(config.FIELDS[i], floatV);
+        }
       }
       groups.add(group);
     }

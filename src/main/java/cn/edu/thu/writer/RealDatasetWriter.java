@@ -59,24 +59,19 @@ public class RealDatasetWriter implements Runnable {
   @Override
   public void run() {
 
-    long totalTime = 1;
-
     try {
 
       long recordNum = 0;
 
       while(reader.hasNextBatch()) {
         List<Record> batch = reader.nextBatch();
-        totalTime += database.insertBatch(batch);
-        recordNum += batch.size();
+        statistics.timeCost.addAndGet(database.insertBatch(batch));
+        statistics.recordNum.addAndGet(batch.size());
+        statistics.pointNum.addAndGet(batch.size() * config.FIELDS.length);
       }
 
-      totalTime += database.flush();
-      totalTime += database.close();
-
-      statistics.timeCost.addAndGet(totalTime);
-      statistics.recordNum.addAndGet(recordNum);
-      statistics.pointNum.addAndGet(recordNum * config.FIELDS.length);
+      statistics.timeCost.addAndGet(database.flush());
+      statistics.timeCost.addAndGet(database.close());
 
     } catch (Exception e) {
       e.printStackTrace();

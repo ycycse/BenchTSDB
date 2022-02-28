@@ -106,7 +106,13 @@ public class ORCManager implements IDataBaseManager {
         } else {
           v = (DoubleColumnVector) batch.cols[j + 1];
         }
-        v.vector[i] = (double) record.fields.get(j);
+        if (record.fields.get(j) != null) {
+          v.vector[i] = (double) record.fields.get(j);
+          v.isNull[i] = false;
+        } else {
+          v.isNull[i] = true;
+          v.noNulls = false;
+        }
       }
 
       batch.size++;

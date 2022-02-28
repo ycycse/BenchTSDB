@@ -14,7 +14,7 @@ import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.ReadOnlyTsFile;
+import org.apache.iotdb.tsfile.read.TsFileReader;
 import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
 import org.apache.iotdb.tsfile.read.common.Path;
 import org.apache.iotdb.tsfile.read.expression.IExpression;
@@ -23,6 +23,7 @@ import org.apache.iotdb.tsfile.read.expression.impl.SingleSeriesExpression;
 import org.apache.iotdb.tsfile.read.filter.TimeFilter;
 import org.apache.iotdb.tsfile.read.filter.operator.AndFilter;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
+import org.apache.iotdb.tsfile.utils.BitMap;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
 import org.apache.iotdb.tsfile.write.record.Tablet;
@@ -73,7 +74,7 @@ public class TsFileManager implements IDataBaseManager {
         template.put(config.FIELDS[i], schema);
         schemas.add(schema);
       }
-      writer.registerDeviceTemplate("template", template);
+      writer.registerSchemaTemplate("template", template, false);
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -111,13 +112,20 @@ public class TsFileManager implements IDataBaseManager {
     Tablet tablet = new Tablet(records.get(0).tag, schemas, records.size());
     long[] timestamps = tablet.timestamps;
     Object[] values = tablet.values;
+    tablet.bitMaps = new BitMap[values.length];
+    for (int i = 0; i < tablet.bitMaps.length; i++) {
+      tablet.bitMaps[i] = new BitMap(records.size());
+    }
 
     for (Record record: records) {
       int row = tablet.rowSize++;
       timestamps[row] = record.timestamp;
       for (int i = 0; i < config.FIELDS.length; i++) {
         double[] sensor = (double[]) values[i];
-        sensor[row] = (double) record.fields.get(i);
+        if (record.fields.get(i) != null) {
+          sensor[row] = (double) record.fields.get(i);
+          tablet.bitMaps[i].mark(row);
+        }
       }
     }
     return tablet;
@@ -144,7 +152,7 @@ public class TsFileManager implements IDataBaseManager {
     try {
       TsFileSequenceReader reader = new TsFileSequenceReader(filePath);
 
-      ReadOnlyTsFile readTsFile = new ReadOnlyTsFile(reader);
+      TsFileReader readTsFile = new TsFileReader(reader);
       ArrayList<Path> paths = new ArrayList<>();
       paths.add(new Path(tagValue, field));
       IExpression filter = new SingleSeriesExpression(new Path(tagValue + "." + field),
