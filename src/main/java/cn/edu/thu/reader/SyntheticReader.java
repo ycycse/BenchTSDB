@@ -31,7 +31,7 @@ public class SyntheticReader extends BasicReader {
   private int pointCursor = 0;
   private Random random = new Random(123456);
   private List<Record> batch = new ArrayList<>(config.BATCH_SIZE);
-  private String[] deviceNames = new String[config.BATCH_SIZE];
+  private String[] deviceNames = new String[config.syntheticDeviceNum];
 
   public SyntheticReader(Config config) {
     super(config);
