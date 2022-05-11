@@ -3,12 +3,16 @@ package cn.edu.thu.reader;
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
 
+import cn.edu.thu.common.Schema;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class NOAAReader extends BasicReader {
 
+  public static final Schema SCHEMA = new Schema(new String[]{"TEMP", "DEWP", "SLP", "STP",
+      "VISIB", "WDSP", "MXSPD", "GUST", "MAX", "MIN", "PRCP", "SNDP", "FRSHTT"},
+      new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 0});
   private DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd");
 
   public NOAAReader(Config config, List<String> files) {
@@ -68,5 +72,10 @@ public class NOAAReader extends BasicReader {
       }
     }
     return records;
+  }
+
+  @Override
+  public Schema getCurrentSchema() {
+    return SCHEMA;
   }
 }

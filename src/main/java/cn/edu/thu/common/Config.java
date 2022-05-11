@@ -9,6 +9,7 @@ import java.util.Properties;
 
 public class Config {
 
+  public static final String DEFAULT_TAG = "DEFAULT";
   private static Logger logger = LoggerFactory.getLogger(Config.class);
 
   // INFLUXDB, OPENTSDB, SUMMARYSTORE, WATERWHEEL, KAIROSDB, TSFILE, PARQUET, ORC
@@ -54,9 +55,6 @@ public class Config {
   public String HDFS_IP = "hdfs://127.0.0.1:9000/"; // must end with '/'
   public boolean LOCAL = false;
 
-  public String[] FIELDS = null;
-  public int[] PRECISION = null;
-
   public int WATERWHEEL_INGEST_PORT = 10000;
   public int WATERWHEEL_QUERY_PORT = 10001;
 
@@ -101,43 +99,6 @@ public class Config {
   }
 
   private void init() {
-    switch (DATA_SET) {
-      case "NOAA":
-        FIELDS = new String[]{"TEMP", "DEWP", "SLP", "STP",
-            "VISIB", "WDSP", "MXSPD", "GUST", "MAX", "MIN", "PRCP", "SNDP", "FRSHTT"};
-        PRECISION = new int[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 0};
-        break;
-      case "GEOLIFE":
-        FIELDS = new String[]{"Latitude", "Longitude", "Zero", "Altitude"};
-        PRECISION = new int[]{6, 6, 0, 0};
-        break;
-      case "TDRIVE":
-        FIELDS = new String[]{"longitude", "latitude"};
-        PRECISION = new int[]{5, 5};
-        break;
-      case "MLAB_IP":
-        FIELDS = new String[]{"connect_time"};
-        PRECISION = new int[]{6};
-        break;
-      case "MLAB_UTILIZATION":
-        FIELDS = new String[]{"value"};
-        PRECISION = new int[]{10};
-        break;
-      case "REDD":
-        FIELDS = new String[]{"value"};
-        PRECISION = new int[]{2};
-        break;
-      case "SYNTHETIC":
-        FIELDS = new String[syntheticMeasurementNum];
-        PRECISION = new int[syntheticMeasurementNum];
-        for (int i = 0; i < syntheticMeasurementNum; i++) {
-          FIELDS[i] = "sensor_" + i;
-          PRECISION[i] = 4;
-        }
-        break;
-      default:
-        throw new RuntimeException(DATA_SET + " is not support");
-    }
     if (!DATA_DIR.endsWith("/")) {
       DATA_DIR += "/";
     }

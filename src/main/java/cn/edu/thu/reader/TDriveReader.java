@@ -2,6 +2,7 @@ package cn.edu.thu.reader;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.Schema;
 import java.io.File;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -13,6 +14,8 @@ import org.slf4j.LoggerFactory;
 
 public class TDriveReader extends BasicReader {
 
+  public static final Schema SCHEMA = new Schema(new String[]{"longitude", "latitude"},
+      new int[]{5, 5});
   private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
   private static Logger logger = LoggerFactory.getLogger(TDriveReader.class);
 
@@ -58,4 +61,8 @@ public class TDriveReader extends BasicReader {
     return null;
   }
 
+  @Override
+  public Schema getCurrentSchema() {
+    return SCHEMA;
+  }
 }

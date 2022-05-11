@@ -1,6 +1,7 @@
 package backup;
 
 import cn.edu.thu.common.Config;
+import cn.edu.thu.common.Schema;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -11,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 public class CalculateMLabIPParser {
 
+  public static final Schema SCHEMA = new Schema(new String[]{"connect_time"},
+      new int[]{6});
   private Config config;
   private static Logger logger = LoggerFactory.getLogger(CalculateMLabIPParser.class);
 

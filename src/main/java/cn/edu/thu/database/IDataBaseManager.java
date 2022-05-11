@@ -2,6 +2,7 @@ package cn.edu.thu.database;
 
 import cn.edu.thu.common.Record;
 
+import cn.edu.thu.common.Schema;
 import java.util.List;
 
 public interface IDataBaseManager {
@@ -9,7 +10,7 @@ public interface IDataBaseManager {
     /**
      * @return time cost in ns
      */
-    long insertBatch(List<Record> records);
+    long insertBatch(List<Record> records, Schema schema);
 
 
     /**

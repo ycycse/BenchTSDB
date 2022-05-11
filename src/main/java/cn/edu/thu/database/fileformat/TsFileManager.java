@@ -2,16 +2,15 @@ package cn.edu.thu.database.fileformat;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
-import com.google.flatbuffers.Table;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import javafx.scene.control.Tab;
+import java.util.Map.Entry;
 import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -38,10 +37,11 @@ import org.slf4j.LoggerFactory;
 public class TsFileManager implements IDataBaseManager {
 
   private static Logger logger = LoggerFactory.getLogger(TsFileManager.class);
-  private TsFileWriter writer;
+  private Map<String, TsFileWriter> writerMap = new HashMap<>();
   private String filePath;
   private Config config;
   private List<MeasurementSchema> schemas = new ArrayList<>();
+  private long totalFileSize;
 
   public TsFileManager(Config config) {
     this.config = config;
@@ -61,26 +61,6 @@ public class TsFileManager implements IDataBaseManager {
 
   @Override
   public void initClient() {
-    if (Config.FOR_QUERY) {
-      return;
-    }
-    File file = new File(filePath);
-    file.getParentFile().mkdirs();
-    try {
-      writer = new TsFileWriter(file);
-      Map<String, MeasurementSchema> template = new HashMap<>();
-      for (int i = 0; i < config.FIELDS.length; i++) {
-        Map<String, String> props = new HashMap<>();
-        props.put(Encoder.MAX_POINT_NUMBER, config.PRECISION[i] + "");
-        MeasurementSchema schema = new MeasurementSchema(config.FIELDS[i], TSDataType.DOUBLE,
-            TSEncoding.RLE, CompressionType.SNAPPY, props);
-        template.put(config.FIELDS[i], schema);
-        schemas.add(schema);
-      }
-      writer.registerSchemaTemplate("template", template, false);
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
   }
 
 //  @Override
@@ -97,21 +77,61 @@ public class TsFileManager implements IDataBaseManager {
 //    return System.nanoTime() - start;
 //  }
 
+  private String tagToFilePath(String tag) {
+    if (config.splitFileByDevice) {
+      return tag + "_" + filePath;
+    } else {
+      return Config.DEFAULT_TAG + "_" + filePath;
+    }
+  }
+
+  private TsFileWriter createWriter(String tag, Schema schema) {
+    File file = new File(tagToFilePath(tag));
+    file.getParentFile().mkdirs();
+    TsFileWriter writer = null;
+    try {
+      writer = new TsFileWriter(file);
+      Map<String, MeasurementSchema> template = new HashMap<>();
+      for (int i = 0; i < schema.fields.length; i++) {
+        Map<String, String> props = new HashMap<>();
+        props.put(Encoder.MAX_POINT_NUMBER, schema.precision[i] + "");
+        MeasurementSchema measurementSchema = new MeasurementSchema(schema.fields[i],
+            TSDataType.DOUBLE,
+            TSEncoding.RLE, CompressionType.SNAPPY, props);
+        template.put(schema.fields[i], measurementSchema);
+        schemas.add(measurementSchema);
+      }
+      writer.registerSchemaTemplate("template", template, false);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return writer;
+  }
+
+  private TsFileWriter getWriter(String tag, Schema schema) {
+    if (!config.splitFileByDevice) {
+      return writerMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(tag, schema));
+    } else {
+      return writerMap.computeIfAbsent(tag, t -> createWriter(tag, schema));
+    }
+  }
 
   @Override
-  public long insertBatch(List<Record> records) {
+  public long insertBatch(List<Record> records, Schema schema) {
     long start = System.nanoTime();
+    TsFileWriter writer = getWriter(records.get(0).tag, schema);
     if (config.useAlignedTablet) {
-      insertBatchAligned(records);
+      insertBatchAligned(records, writer, schema);
     } else {
-      insertBatchNonAligned(records);
+      insertBatchNonAligned(records, writer, schema);
     }
 
     return System.nanoTime() - start;
   }
 
-  private void insertBatchNonAligned(List<Record> records) {
-    NonAlignedTablet tablet = convertToNonAlignedTablet(records);
+  private void insertBatchNonAligned(List<Record> records,
+      TsFileWriter writer, Schema schema) {
+    NonAlignedTablet tablet = convertToNonAlignedTablet(records, schema);
     try {
       writer.write(tablet);
     } catch (Exception e) {
@@ -119,8 +139,9 @@ public class TsFileManager implements IDataBaseManager {
     }
   }
 
-  private void insertBatchAligned(List<Record> records) {
-    Tablet tablet = convertToTablet(records);
+  private void insertBatchAligned(List<Record> records,
+      TsFileWriter writer, Schema schema) {
+    Tablet tablet = convertToTablet(records, schema);
     try {
       writer.write(tablet);
     } catch (Exception e) {
@@ -128,11 +149,12 @@ public class TsFileManager implements IDataBaseManager {
     }
   }
 
-  private NonAlignedTablet convertToNonAlignedTablet(List<Record> records) {
+  private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
+      Schema schema) {
     NonAlignedTablet tablet = new NonAlignedTablet(records.get(0).tag, schemas);
     for (Record record: records) {
       long timestamp = record.timestamp;
-      for (int i = 0; i < config.FIELDS.length; i++) {
+      for (int i = 0; i < schema.fields.length; i++) {
         if (record.fields.get(i) != null) {
           tablet.addValue(schemas.get(i).getMeasurementId(), timestamp, record.fields.get(i));
         }
@@ -142,7 +164,7 @@ public class TsFileManager implements IDataBaseManager {
   }
 
 
-  private Tablet convertToTablet(List<Record> records) {
+  private Tablet convertToTablet(List<Record> records, Schema schema) {
     Tablet tablet = new Tablet(records.get(0).tag, schemas, records.size());
     long[] timestamps = tablet.timestamps;
     Object[] values = tablet.values;
@@ -154,7 +176,7 @@ public class TsFileManager implements IDataBaseManager {
     for (Record record: records) {
       int row = tablet.rowSize++;
       timestamps[row] = record.timestamp;
-      for (int i = 0; i < config.FIELDS.length; i++) {
+      for (int i = 0; i < schema.fields.length; i++) {
         double[] sensor = (double[]) values[i];
         if (record.fields.get(i) != null) {
           sensor[row] = (double) record.fields.get(i);
@@ -166,13 +188,13 @@ public class TsFileManager implements IDataBaseManager {
   }
 
 
-  private List<TSRecord> convertToRecords(List<Record> records) {
+  private List<TSRecord> convertToRecords(List<Record> records, Schema schema) {
     List<TSRecord> tsRecords = new ArrayList<>();
     for (Record record : records) {
       TSRecord tsRecord = new TSRecord(record.timestamp, record.tag);
-      for (int i = 0; i < config.FIELDS.length; i++) {
+      for (int i = 0; i < schema.fields.length; i++) {
         double floatField = (double) record.fields.get(i);
-        tsRecord.addTuple(new DoubleDataPoint(config.FIELDS[i], floatField));
+        tsRecord.addTuple(new DoubleDataPoint(schema.fields[i], floatField));
       }
       tsRecords.add(tsRecord);
     }
@@ -184,7 +206,7 @@ public class TsFileManager implements IDataBaseManager {
 
     long start = System.nanoTime();
     try {
-      TsFileSequenceReader reader = new TsFileSequenceReader(filePath);
+      TsFileSequenceReader reader = new TsFileSequenceReader(tagToFilePath(tagValue));
 
       TsFileReader readTsFile = new TsFileReader(reader);
       ArrayList<Path> paths = new ArrayList<>();
@@ -218,12 +240,17 @@ public class TsFileManager implements IDataBaseManager {
   @Override
   public long close() {
     long start = System.nanoTime();
-    try {
-      writer.close();
-    } catch (IOException e) {
-      e.printStackTrace();
+
+    for (Entry<String, TsFileWriter> entry : writerMap.entrySet()) {
+      try {
+        entry.getValue().close();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      totalFileSize += new File(tagToFilePath(entry.getKey())).length();
     }
-    logger.info("Total file size: {}", new File(filePath).length() / (1024*1024.0));
+
+    logger.info("Total file size: {}", totalFileSize / (1024*1024.0));
     return System.nanoTime() - start;
   }
 }

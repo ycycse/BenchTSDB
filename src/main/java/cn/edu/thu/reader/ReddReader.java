@@ -2,10 +2,14 @@ package cn.edu.thu.reader;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.Schema;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ReddReader extends BasicReader {
+
+  public static final Schema SCHEMA = new Schema(new String[]{"value"},
+      new int[]{2});
 
   public ReddReader(Config config, List<String> files) {
     super(config, files);
@@ -40,5 +44,10 @@ public class ReddReader extends BasicReader {
     } catch (Exception ignore) {
     }
     return null;
+  }
+
+  @Override
+  public Schema getCurrentSchema() {
+    return SCHEMA;
   }
 }

@@ -2,16 +2,21 @@ package cn.edu.thu.database.fileformat;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 
+import java.util.Map;
+import java.util.Map.Entry;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.orc.*;
+import org.apache.orc.OrcFile.Version;
 import org.apache.orc.storage.ql.exec.vector.BytesColumnVector;
 import org.apache.orc.storage.ql.exec.vector.DoubleColumnVector;
 import org.apache.orc.storage.ql.exec.vector.LongColumnVector;
@@ -22,18 +27,20 @@ import org.slf4j.LoggerFactory;
 
 /**
  * time, seriesid, value
- *
+ * <p>
  * time, deviceId, s1, s2, s3...
- *
+ * <p>
  * time, series1, series2...
  */
 public class ORCManager implements IDataBaseManager {
 
   private static Logger logger = LoggerFactory.getLogger(ORCManager.class);
-  private Writer[] writers;
-  private TypeDescription schema;
+
+  private Map<String, Writer> writerMap = new HashMap<>();
   private Config config;
   private String filePath;
+
+  private long totalFileSize = 0;
 
   public ORCManager(Config config) {
     this.config = config;
@@ -52,42 +59,36 @@ public class ORCManager implements IDataBaseManager {
 
   @Override
   public void initClient() {
-    if (Config.FOR_QUERY) {
-      return;
-    }
 
-    schema = TypeDescription.fromString(genWriteSchema());
-    createWriters();
   }
 
-  private void createWriters() {
-    int fileNum = 1;
-    if (config.useSynthetic && config.splitFileByDevice) {
-      fileNum = config.syntheticDeviceNum;
-    }
-    writers = new Writer[fileNum];
+  private Writer createWriter(String tag, Schema schema) {
+    TypeDescription orcSchema = TypeDescription.fromString(genWriteSchema(schema));
 
-    for (int i = 0; i < fileNum; i++) {
-      String fullFilePath = i + "_" + filePath;
-      new File(fullFilePath).delete();
-      try {
-        writers[i] = OrcFile.createWriter(new Path(fullFilePath),
-            OrcFile.writerOptions(new Configuration())
-                .setSchema(schema)
-                .compress(CompressionKind.SNAPPY)
-                .version(OrcFile.Version.V_0_12));
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+    String fullFilePath = tagToFilePath(tag);
+    new File(fullFilePath).delete();
+    Writer writer = null;
+    try {
+      writer = OrcFile.createWriter(new Path(fullFilePath),
+          OrcFile.writerOptions(new Configuration())
+              .setSchema(orcSchema)
+              .compress(CompressionKind.SNAPPY)
+              .version(Version.V_0_12));
+    } catch (IOException e) {
+      e.printStackTrace();
     }
+    return writer;
   }
 
   @Override
-  public long insertBatch(List<Record> records) {
+  public long insertBatch(List<Record> records, Schema schema) {
 
     long start = System.nanoTime();
 
-    VectorizedRowBatch batch = schema.createRowBatch(records.size());
+    String tag = records.get(0).tag;
+    Writer writer = getWriter(tag, schema);
+
+    VectorizedRowBatch batch = writer.getSchema().createRowBatch(records.size());
 
     for (int i = 0; i < records.size(); i++) {
       Record record = records.get(i);
@@ -99,7 +100,7 @@ public class ORCManager implements IDataBaseManager {
         device.setVal(i, record.tag.getBytes(StandardCharsets.UTF_8));
       }
 
-      for (int j = 0; j < config.FIELDS.length; j++) {
+      for (int j = 0; j < schema.fields.length; j++) {
         DoubleColumnVector v;
         if (!config.splitFileByDevice) {
           v = (DoubleColumnVector) batch.cols[j + 2];
@@ -120,7 +121,7 @@ public class ORCManager implements IDataBaseManager {
       // If the batch is full, write it out and start over. actually not needed here
       if (batch.size == batch.getMaxSize()) {
         try {
-          getWriter(record.tag).addRowBatch(batch);
+          writer.addRowBatch(batch);
         } catch (IOException e) {
           e.printStackTrace();
         }
@@ -131,20 +132,23 @@ public class ORCManager implements IDataBaseManager {
     return System.nanoTime() - start;
   }
 
-  private Writer getWriter(String tag) {
-    if (config.splitFileByDevice) {
-      return writers[getFileIndex(tag)];
+  private Writer getWriter(String tag, Schema schema) {
+    if (!config.splitFileByDevice) {
+      return writerMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(t, schema));
     } else {
-      return writers[0];
+      return writerMap.computeIfAbsent(tag, t -> createWriter(t, schema));
     }
   }
 
-  private int getFileIndex(String tag) {
-    // root.device_i
-    return Integer.parseInt(tag.split("_")[1]);
+  private String tagToFilePath(String tag) {
+    if (config.splitFileByDevice) {
+      return tag + "_" + filePath;
+    } else {
+      return Config.DEFAULT_TAG + "_" + filePath;
+    }
   }
 
-  private String genWriteSchema() {
+  private String genWriteSchema(Schema schema) {
     String s;
     if (config.splitFileByDevice) {
       s = "struct<timestamp:bigint";
@@ -152,8 +156,8 @@ public class ORCManager implements IDataBaseManager {
       s = "struct<timestamp:bigint,deviceId:string";
     }
 
-    for (int i = 0; i < config.FIELDS.length; i++) {
-      s += ("," + config.FIELDS[i] + ":" + "DOUBLE");
+    for (int i = 0; i < schema.fields.length; i++) {
+      s += ("," + schema.fields[i] + ":" + "DOUBLE");
     }
     s += ">";
     return s;
@@ -174,20 +178,12 @@ public class ORCManager implements IDataBaseManager {
 
     String schema = getReadSchema(field);
     try {
-      Reader reader = OrcFile.createReader(new Path(getFileIndex(tagValue) + "_" + filePath),
+      Reader reader = OrcFile.createReader(new Path(tagToFilePath(tagValue)),
           OrcFile.readerOptions(new Configuration()));
       TypeDescription readSchema = TypeDescription.fromString(schema);
 
       VectorizedRowBatch batch = readSchema.createRowBatch();
       RecordReader rowIterator = reader.rows(reader.options().schema(readSchema));
-
-      int fieldId;
-
-      for (fieldId = 0; fieldId < config.FIELDS.length; fieldId++) {
-        if (field.endsWith(config.FIELDS[fieldId])) {
-          break;
-        }
-      }
 
       int result = 0;
       while (rowIterator.nextBatch(batch)) {
@@ -230,17 +226,15 @@ public class ORCManager implements IDataBaseManager {
   @Override
   public long close() {
     long start = System.nanoTime();
-    long fileSize = 0;
-    for (int i = 0, writersLength = writers.length; i < writersLength; i++) {
-      Writer writer = writers[i];
+    for (Entry<String, Writer> entry : writerMap.entrySet()) {
       try {
-        writer.close();
+        entry.getValue().close();
       } catch (IOException e) {
         e.printStackTrace();
       }
-      fileSize += new File(i + "_" + filePath).length();
+      totalFileSize += new File(tagToFilePath(entry.getKey())).length();
     }
-    logger.info("Total file size: {}", fileSize / (1024*1024.0));
+    logger.info("Total file size: {}", totalFileSize / (1024 * 1024.0));
     return System.nanoTime() - start;
   }
 }

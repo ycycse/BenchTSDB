@@ -21,11 +21,14 @@ package cn.edu.thu.reader;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.Schema;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 public class SyntheticReader extends BasicReader {
+
+  private Schema schema;
 
   private int deviceCursor = 0;
   private int pointCursor = 0;
@@ -45,6 +48,14 @@ public class SyntheticReader extends BasicReader {
       }
       Record record = new Record(0, "", fields);
       batch.add(record);
+    }
+
+    schema = new Schema();
+    schema.fields = new String[config.syntheticMeasurementNum];
+    schema.precision = new int[config.syntheticMeasurementNum];
+    for (int i = 0; i < config.syntheticMeasurementNum; i++) {
+      schema.fields[i] = "sensor_" + i;
+      schema.precision[i] = 4;
     }
   }
 
@@ -77,5 +88,10 @@ public class SyntheticReader extends BasicReader {
   @Override
   public void init() throws Exception {
      // no action
+  }
+
+  @Override
+  public Schema getCurrentSchema() {
+    return schema;
   }
 }

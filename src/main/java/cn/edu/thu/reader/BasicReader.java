@@ -2,6 +2,7 @@ package cn.edu.thu.reader;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.Schema;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
@@ -111,4 +112,5 @@ public abstract class BasicReader {
    */
   public abstract void init() throws Exception;
 
+  public abstract Schema getCurrentSchema();
 }

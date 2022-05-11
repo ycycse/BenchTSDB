@@ -2,11 +2,15 @@ package cn.edu.thu.database.fileformat;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.orc.Writer;
@@ -14,7 +18,6 @@ import org.apache.parquet.column.ParquetProperties;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.example.data.simple.SimpleGroupFactory;
 import org.apache.parquet.filter2.compat.FilterCompat;
-import org.apache.parquet.filter2.predicate.Operators;
 import org.apache.parquet.hadoop.ParquetInputFormat;
 import org.apache.parquet.hadoop.ParquetReader;
 import org.apache.parquet.hadoop.ParquetWriter;
@@ -43,12 +46,12 @@ import static org.apache.parquet.filter2.predicate.FilterApi.*;
 public class ParquetManager implements IDataBaseManager {
 
   private static Logger logger = LoggerFactory.getLogger(ParquetManager.class);
-  private MessageType schema;
-  private ParquetWriter[] writers;
-  private SimpleGroupFactory simpleGroupFactory;
+  private Map<String, ParquetWriter> writerMap = new HashMap<>();
+  private Map<String, SimpleGroupFactory> groupFactoryMap = new HashMap<>();
   private Config config;
   private String filePath;
   private String schemaName = "defaultSchema";
+  private long totalFileSize = 0;
 
   public ParquetManager(Config config) {
     this.config = config;
@@ -67,70 +70,70 @@ public class ParquetManager implements IDataBaseManager {
 
   @Override
   public void initClient() {
-    if (Config.FOR_QUERY) {
-      return;
-    }
 
+  }
+
+  private MessageType toParquetSchema(Schema schema) {
     Types.MessageTypeBuilder builder = Types.buildMessage();
-    builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, config.TIME_NAME));
+    builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, Config.TIME_NAME));
     if (!config.splitFileByDevice) {
       builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
     }
-    for (int i = 0; i < config.FIELDS.length; i++) {
-      builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.DOUBLE, config.FIELDS[i]));
+    for (int i = 0; i < schema.fields.length; i++) {
+      builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL,
+          PrimitiveType.PrimitiveTypeName.DOUBLE, schema.fields[i]));
     }
 
-    schema = builder.named(schemaName);
-    simpleGroupFactory = new SimpleGroupFactory(schema);
-    Configuration configuration = new Configuration();
-
-    createWriters(configuration);
+    return builder.named(schemaName);
   }
 
-  private void createWriters(Configuration configuration) {
-    int fileNum = 1;
-    if (config.useSynthetic && config.splitFileByDevice) {
-      fileNum = config.syntheticDeviceNum;
-    }
-    writers = new ParquetWriter[fileNum];
-
-    for (int i = 0; i < fileNum; i++) {
-      GroupWriteSupport.setSchema(schema, configuration);
-      GroupWriteSupport groupWriteSupport = new GroupWriteSupport();
-      groupWriteSupport.init(configuration);
-      new File(i + "_" + filePath).delete();
-      try {
-        writers[i] = new ParquetWriter(new Path(i + "_" + filePath), groupWriteSupport,
-            CompressionCodecName.SNAPPY,
-            ParquetWriter.DEFAULT_BLOCK_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE,
-            true, true, ParquetProperties.WriterVersion.PARQUET_2_0);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
-    }
-  }
-
-  private ParquetWriter getWriter(String tag) {
+  private String tagToFilePath(String tag) {
     if (config.splitFileByDevice) {
-      return writers[getFileIndex(tag)];
+      return tag + "_" + filePath;
     } else {
-      return writers[0];
+      return Config.DEFAULT_TAG + "_" + filePath;
     }
   }
 
-  private int getFileIndex(String tag) {
-    // root.device_i
-    return Integer.parseInt(tag.split("_")[1]);
+  private ParquetWriter createWriter(String tag, Schema schema) {
+    Configuration configuration = new Configuration();
+    MessageType messageType = toParquetSchema(schema);
+    GroupWriteSupport.setSchema(messageType, configuration);
+    GroupWriteSupport groupWriteSupport = new GroupWriteSupport();
+    groupWriteSupport.init(configuration);
+
+    String filePath = tagToFilePath(tag);
+    new File(filePath).delete();
+    try {
+      groupFactoryMap.put(tag, new SimpleGroupFactory(messageType));
+      return new ParquetWriter(new Path(filePath), groupWriteSupport,
+          CompressionCodecName.SNAPPY,
+          ParquetWriter.DEFAULT_BLOCK_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE,
+          true, true, ParquetProperties.WriterVersion.PARQUET_2_0);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return null;
   }
+
+  private ParquetWriter getWriter(String tag, Schema schema) {
+    if (!config.splitFileByDevice) {
+      return writerMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(tag, schema));
+    } else {
+      return writerMap.computeIfAbsent(tag, t -> createWriter(tag, schema));
+    }
+  }
+
 
   @Override
-  public long insertBatch(List<Record> records) {
+  public long insertBatch(List<Record> records, Schema schema) {
     long start = System.nanoTime();
 
-    List<Group> groups = convertRecords(records);
+    ParquetWriter writer = getWriter(records.get(0).tag, schema);
+    List<Group> groups = convertRecords(records, schema);
     for(Group group: groups) {
       try {
-        getWriter(records.get(0).tag).write(group);
+        writer.write(group);
       } catch (Exception e) {
         e.printStackTrace();
       }
@@ -140,18 +143,19 @@ public class ParquetManager implements IDataBaseManager {
   }
 
 
-  private List<Group> convertRecords(List<Record> records) {
+  private List<Group> convertRecords(List<Record> records, Schema schema) {
     List<Group> groups = new ArrayList<>();
+    SimpleGroupFactory simpleGroupFactory = groupFactoryMap.get(records.get(0).tag);
     for(Record record: records) {
       Group group = simpleGroupFactory.newGroup();
       group.add(Config.TIME_NAME, record.timestamp);
       if (!config.splitFileByDevice) {
         group.add(Config.TAG_NAME, record.tag);
       }
-      for(int i = 0; i < config.FIELDS.length; i++) {
+      for(int i = 0; i < schema.fields.length; i++) {
         if (record.fields.get(i) != null) {
           double floatV = (double) record.fields.get(i);
-          group.add(config.FIELDS[i], floatV);
+          group.add(schema.fields[i], floatV);
         }
       }
       groups.add(group);
@@ -186,7 +190,7 @@ public class ParquetManager implements IDataBaseManager {
 
     // set reader
     ParquetReader.Builder<Group> reader= ParquetReader
-            .builder(new GroupReadSupport(), new Path(getFileIndex(tagValue) + "_" + filePath))
+            .builder(new GroupReadSupport(), new Path(tagToFilePath(tagValue)))
             .withConf(conf)
             .withFilter(filter);
 
@@ -216,17 +220,16 @@ public class ParquetManager implements IDataBaseManager {
   @Override
   public long close() {
     long start = System.nanoTime();
-    long fileSize = 0;
-    for (int i = 0, writersLength = writers.length; i < writersLength; i++) {
-      ParquetWriter writer = writers[i];
+
+    for (Entry<String, ParquetWriter> entry : writerMap.entrySet()) {
       try {
-        writer.close();
+        entry.getValue().close();
       } catch (IOException e) {
         e.printStackTrace();
       }
-      fileSize += new File(i + "_" + filePath).length();
+      totalFileSize += new File(tagToFilePath(entry.getKey())).length();
     }
-    logger.info("Total file size: {}", fileSize / (1024*1024.0));
+    logger.info("Total file size: {}", totalFileSize / (1024*1024.0));
     return System.nanoTime() - start;
   }
 }

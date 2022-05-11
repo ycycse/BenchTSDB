@@ -2,6 +2,7 @@ package backup;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.Schema;
 import cn.edu.thu.reader.BasicReader;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
@@ -10,6 +11,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MLabUtilizationReader extends BasicReader {
+
+    public static final Schema SCHEMA = new Schema(new String[]{"value"},
+        new int[]{10});
 
     public MLabUtilizationReader(Config config, List<String> files) {
         super(config, files);
@@ -50,5 +54,10 @@ public class MLabUtilizationReader extends BasicReader {
     @Override
     public void init() throws Exception {
 
+    }
+
+    @Override
+    public Schema getCurrentSchema() {
+        return SCHEMA;
     }
 }

@@ -3,6 +3,7 @@ package cn.edu.thu.reader;
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
 
+import cn.edu.thu.common.Schema;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -13,6 +14,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class GeolifeReader extends BasicReader {
+
+  public static final Schema SCHEMA = new Schema(new String[]{"Latitude", "Longitude", "Zero",
+      "Altitude"}, new int[]{6, 6, 0, 0});
 
   private static Logger logger = LoggerFactory.getLogger(GeolifeReader.class);
   private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-hh:mm:ss");
@@ -61,5 +65,10 @@ public class GeolifeReader extends BasicReader {
       }
     }
     return records;
+  }
+
+  @Override
+  public Schema getCurrentSchema() {
+    return SCHEMA;
   }
 }
