@@ -60,6 +60,9 @@ public class Config {
   public int WATERWHEEL_INGEST_PORT = 10000;
   public int WATERWHEEL_QUERY_PORT = 10001;
 
+  // TsFile configs
+  public boolean useAlignedTablet = false;
+
   // for query
 
   // geolife
@@ -173,6 +176,9 @@ public class Config {
     syntheticPointNum =
         Integer
             .parseInt(properties.getOrDefault("synthetic_point_num", syntheticPointNum).toString());
+
+    useAlignedTablet = Boolean.parseBoolean(properties.getOrDefault("use_aligned_tablet",
+        useAlignedTablet).toString());
 
     BEGIN_FILE = Integer.parseInt(properties.getOrDefault("BEGIN_FILE", BEGIN_FILE).toString());
     END_FILE = Integer.parseInt(properties.getOrDefault("END_FILE", END_FILE).toString());

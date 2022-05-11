@@ -3,6 +3,7 @@ package cn.edu.thu.database.fileformat;
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
 import cn.edu.thu.database.IDataBaseManager;
+import com.google.flatbuffers.Table;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -10,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javafx.scene.control.Tab;
 import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -25,6 +27,7 @@ import org.apache.iotdb.tsfile.read.filter.operator.AndFilter;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.utils.BitMap;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
+import org.apache.iotdb.tsfile.write.record.NonAlignedTablet;
 import org.apache.iotdb.tsfile.write.record.TSRecord;
 import org.apache.iotdb.tsfile.write.record.Tablet;
 import org.apache.iotdb.tsfile.write.record.datapoint.DoubleDataPoint;
@@ -98,13 +101,44 @@ public class TsFileManager implements IDataBaseManager {
   @Override
   public long insertBatch(List<Record> records) {
     long start = System.nanoTime();
+    if (config.useAlignedTablet) {
+      insertBatchAligned(records);
+    } else {
+      insertBatchNonAligned(records);
+    }
+
+    return System.nanoTime() - start;
+  }
+
+  private void insertBatchNonAligned(List<Record> records) {
+    NonAlignedTablet tablet = convertToNonAlignedTablet(records);
+    try {
+      writer.write(tablet);
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  private void insertBatchAligned(List<Record> records) {
     Tablet tablet = convertToTablet(records);
     try {
       writer.write(tablet);
     } catch (Exception e) {
       e.printStackTrace();
     }
-    return System.nanoTime() - start;
+  }
+
+  private NonAlignedTablet convertToNonAlignedTablet(List<Record> records) {
+    NonAlignedTablet tablet = new NonAlignedTablet(records.get(0).tag, schemas);
+    for (Record record: records) {
+      long timestamp = record.timestamp;
+      for (int i = 0; i < config.FIELDS.length; i++) {
+        if (record.fields.get(i) != null) {
+          tablet.addValue(schemas.get(i).getMeasurementId(), timestamp, record.fields.get(i));
+        }
+      }
+    }
+    return tablet;
   }
 
 
