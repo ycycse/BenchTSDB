@@ -19,9 +19,14 @@
 
 package cn.edu.thu.common;
 
+import java.util.Arrays;
+import java.util.Objects;
+
 public class Schema {
   public String[] fields = null;
   public int[] precision = null;
+  // optional, if the schema is bound to a specify tag
+  public String tag = Config.DEFAULT_TAG;
 
   public Schema() {
   }
@@ -29,5 +34,27 @@ public class Schema {
   public Schema(String[] fields, int[] precision) {
     this.fields = fields;
     this.precision = precision;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Schema schema = (Schema) o;
+    return Arrays.equals(fields, schema.fields) &&
+        Arrays.equals(precision, schema.precision) &&
+        Objects.equals(tag, schema.tag);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = Objects.hash(tag);
+    result = 31 * result + Arrays.hashCode(fields);
+    result = 31 * result + Arrays.hashCode(precision);
+    return result;
   }
 }

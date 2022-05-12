@@ -24,13 +24,13 @@ public class TDriveReader extends BasicReader {
   }
 
   @Override
-  public void init() {
+  public void onFileOpened() {
     currentDeviceId =
         DEVICE_PREFIX + currentFile.split(config.DATA_DIR)[1].replaceAll("\\.txt", "");
   }
 
   @Override
-  public List<Record> nextBatch() {
+  public List<Record> convertCachedLinesToRecords() {
     List<Record> records = new ArrayList<>();
     for (String line : cachedLines) {
       Record record = convertToRecord(line);

@@ -26,7 +26,7 @@ public class GeolifeReader extends BasicReader {
   }
 
 
-  private Record convertToRecord(String line) {
+  protected Record convertToRecord(String line) {
     try {
       List<Object> fields = new ArrayList<>();
       String[] items = line.split(",");
@@ -47,7 +47,7 @@ public class GeolifeReader extends BasicReader {
   }
 
   @Override
-  public void init() throws Exception {
+  public void onFileOpened() throws Exception {
     currentDeviceId = DEVICE_PREFIX + currentFile.split(config.DATA_DIR)[1].split("/Trajectory")[0];
     // skip 6 lines, which is useless
     for (int i = 0; i < 6; i++) {
@@ -56,7 +56,7 @@ public class GeolifeReader extends BasicReader {
   }
 
   @Override
-  public List<Record> nextBatch() {
+  public List<Record> convertCachedLinesToRecords() {
     List<Record> records = new ArrayList<>();
     for (String line : cachedLines) {
       Record record = convertToRecord(line);

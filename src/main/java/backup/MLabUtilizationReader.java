@@ -43,7 +43,7 @@ public class MLabUtilizationReader extends BasicReader {
 
 
     @Override
-    public List<Record> nextBatch() {
+    public List<Record> convertCachedLinesToRecords() {
         List<Record> records = new ArrayList<>();
         for (String line : cachedLines) {
             records.addAll(convertToRecord(line));
@@ -52,7 +52,7 @@ public class MLabUtilizationReader extends BasicReader {
     }
 
     @Override
-    public void init() throws Exception {
+    public void onFileOpened() throws Exception {
 
     }
 

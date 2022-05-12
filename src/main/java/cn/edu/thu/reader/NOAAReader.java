@@ -53,7 +53,7 @@ public class NOAAReader extends BasicReader {
   }
 
   @Override
-  public void init() throws Exception {
+  public void onFileOpened() throws Exception {
     String[] splitStrings = currentFile.split(config.DATA_DIR)[1].replaceAll("\\.op", "")
         .split("-");
     currentDeviceId = DEVICE_PREFIX + splitStrings[0] + "_" + splitStrings[1];
@@ -63,7 +63,7 @@ public class NOAAReader extends BasicReader {
   }
 
   @Override
-  public List<Record> nextBatch() {
+  public List<Record> convertCachedLinesToRecords() {
     List<Record> records = new ArrayList<>();
     for (String line : cachedLines) {
       Record record = convertToRecord(line);

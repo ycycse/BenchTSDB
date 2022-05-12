@@ -5,6 +5,7 @@ import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Statistics;
 import cn.edu.thu.database.*;
 import cn.edu.thu.reader.BasicReader;
+import cn.edu.thu.reader.CSVReader;
 import cn.edu.thu.reader.GeolifeReader;
 import cn.edu.thu.reader.NOAAReader;
 import cn.edu.thu.reader.ReddReader;
@@ -50,6 +51,9 @@ public class RealDatasetWriter implements Runnable {
       case "SYNTHETIC":
         reader = new SyntheticReader(config);
         break;
+      case "CSV":
+        reader = new CSVReader(config, files);
+        break;
       default:
         throw new RuntimeException(config.DATA_SET + " not supported");
     }
@@ -61,10 +65,8 @@ public class RealDatasetWriter implements Runnable {
 
     try {
 
-      long recordNum = 0;
-
-      while(reader.hasNextBatch()) {
-        List<Record> batch = reader.nextBatch();
+      while(reader.hasNext()) {
+        List<Record> batch = reader.next();
         statistics.timeCost.addAndGet(database.insertBatch(batch, reader.getCurrentSchema()));
         statistics.recordNum.addAndGet(batch.size());
         statistics.pointNum.addAndGet(batch.size() * reader.getCurrentSchema().fields.length);

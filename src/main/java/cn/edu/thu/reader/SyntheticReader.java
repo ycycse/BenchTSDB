@@ -60,12 +60,12 @@ public class SyntheticReader extends BasicReader {
   }
 
   @Override
-  public boolean hasNextBatch() {
+  public boolean hasNext() {
     return deviceCursor < config.syntheticDeviceNum;
   }
 
   @Override
-  public List<Record> nextBatch() {
+  public List<Record> convertCachedLinesToRecords() {
     String device = deviceNames[deviceCursor];
 
     int i = 0;
@@ -86,7 +86,7 @@ public class SyntheticReader extends BasicReader {
   }
 
   @Override
-  public void init() throws Exception {
+  public void onFileOpened() throws Exception {
      // no action
   }
 

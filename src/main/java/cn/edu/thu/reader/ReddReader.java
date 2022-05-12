@@ -16,13 +16,13 @@ public class ReddReader extends BasicReader {
   }
 
   @Override
-  public void init() {
+  public void onFileOpened() {
     currentDeviceId = DEVICE_PREFIX + currentFile.split(config.DATA_DIR)[1].replaceAll("\\.dat", "")
         .replace("/", "_");
   }
 
   @Override
-  public List<Record> nextBatch() {
+  public List<Record> convertCachedLinesToRecords() {
     List<Record> records = new ArrayList<>();
     for (String line : cachedLines) {
       Record record = convertToRecord(line);

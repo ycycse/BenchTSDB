@@ -6,11 +6,13 @@ import cn.edu.thu.common.Schema;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class BasicReader {
+public abstract class BasicReader implements Iterator<List<Record>> {
 
   public static final String DEVICE_PREFIX = "root.group_0.d_";
 
@@ -35,17 +37,19 @@ public abstract class BasicReader {
       reader = new BufferedReader(new FileReader(files.get(currentFileIndex)));
       currentFile = files.get(currentFileIndex);
       logger.info("start to read {}-th file {}", currentFileIndex, currentFile);
-      init();
+      onFileOpened();
     } catch (Exception e) {
       logger.error("meet exception when init file: {}", currentFile);
       e.printStackTrace();
     }
-    cachedLines = new ArrayList<>();
+    cachedLines = new ArrayList<>(config.BATCH_SIZE);
   }
 
-  public boolean hasNextBatch() {
+  public boolean hasNext() {
 
-    cachedLines.clear();
+    if (!cachedLines.isEmpty()) {
+      return true;
+    }
 
     try {
       String line;
@@ -67,7 +71,7 @@ public abstract class BasicReader {
               logger.info("start to read {}-th file {}", currentFileIndex, currentFile);
               reader.close();
               reader = new BufferedReader(new FileReader(currentFile));
-              init();
+              onFileOpened();
               continue;
             } else {
               // no more file to read
@@ -89,9 +93,8 @@ public abstract class BasicReader {
           break;
         }
       }
-    } catch (Exception ignore) {
-      logger.error("read file {} failed", currentFile);
-      ignore.printStackTrace();
+    } catch (Exception e) {
+      logger.error("read file {} failed", currentFile, e);
       return false;
     }
 
@@ -102,15 +105,24 @@ public abstract class BasicReader {
   /**
    * convert the cachedLines to Record list
    */
-  abstract public List<Record> nextBatch();
+  protected abstract List<Record> convertCachedLinesToRecords();
 
+  public List<Record> next() {
+    if (!hasNext()) {
+      throw new NoSuchElementException();
+    }
+    List<Record> records = convertCachedLinesToRecords();
+    cachedLines.clear();
+
+    return records;
+  }
 
   /**
    * initialize when start reading a file
    * maybe skip the first lines
    * maybe init the tagValue(deviceId) from file name
    */
-  public abstract void init() throws Exception;
+  public abstract void onFileOpened() throws Exception;
 
   public abstract Schema getCurrentSchema();
 }
