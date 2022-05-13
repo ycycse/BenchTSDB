@@ -76,7 +76,7 @@ public class RealDatasetWriter implements Runnable {
       statistics.timeCost.addAndGet(database.close());
 
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.warn("Exception during write", e);
     }
 
   }

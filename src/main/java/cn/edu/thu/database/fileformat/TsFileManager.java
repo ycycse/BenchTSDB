@@ -34,15 +34,14 @@ import org.apache.iotdb.tsfile.write.record.datapoint.DoubleDataPoint;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.collection.immutable.IntMap.Bin;
 
 public class TsFileManager implements IDataBaseManager {
 
   private static Logger logger = LoggerFactory.getLogger(TsFileManager.class);
-  private Map<String, TsFileWriter> writerMap = new HashMap<>();
+  private Map<String, TsFileWriter> tagWriterMap = new HashMap<>();
+  private Map<String, List<MeasurementSchema>> tagSchemasMap = new HashMap<>();
   private String filePath;
   private Config config;
-  private List<MeasurementSchema> schemas = new ArrayList<>();
   private long totalFileSize;
 
   public TsFileManager(Config config) {
@@ -94,6 +93,8 @@ public class TsFileManager implements IDataBaseManager {
     try {
       writer = new TsFileWriter(file);
       Map<String, MeasurementSchema> template = new HashMap<>();
+      List<MeasurementSchema> schemas = new ArrayList<>();
+
       for (int i = 0; i < schema.getFields().length; i++) {
         Map<String, String> props = new HashMap<>();
         props.put(Encoder.MAX_POINT_NUMBER, schema.getPrecision()[i] + "");
@@ -101,12 +102,16 @@ public class TsFileManager implements IDataBaseManager {
             toTsDataType(schema.getTypes()[i]),
             toTsEncoding(schema.getTypes()[i]), CompressionType.SNAPPY, props);
         template.put(schema.getFields()[i], measurementSchema);
+
         schemas.add(measurementSchema);
       }
+      tagSchemasMap.put(tag, schemas);
       writer.registerSchemaTemplate(schema.getTag(), template, config.useAlignedSeries);
+      logger.info("Created a writer with {}, schema {}", tag, schema);
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error("Cannot create writer with {}, schema {}", tag, schema);
     }
+
     return writer;
   }
 
@@ -132,9 +137,9 @@ public class TsFileManager implements IDataBaseManager {
 
   private TsFileWriter getWriter(String tag, Schema schema) {
     if (!config.splitFileByDevice) {
-      return writerMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(tag, schema));
+      return tagWriterMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(tag, schema));
     } else {
-      return writerMap.computeIfAbsent(tag, t -> createWriter(tag, schema));
+      return tagWriterMap.computeIfAbsent(tag, t -> createWriter(tag, schema));
     }
   }
 
@@ -157,7 +162,7 @@ public class TsFileManager implements IDataBaseManager {
     try {
       writer.write(tablet);
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
     }
   }
 
@@ -167,13 +172,16 @@ public class TsFileManager implements IDataBaseManager {
     try {
       writer.write(tablet);
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
     }
   }
 
   private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
       Schema schema) {
-    NonAlignedTablet tablet = new NonAlignedTablet(records.get(0).tag, schemas, records.size());
+    String tag = records.get(0).tag;
+    List<MeasurementSchema> schemas = tagSchemasMap.get(tag);
+    NonAlignedTablet tablet = new NonAlignedTablet(tag, schemas,
+        records.size());
     for (Record record: records) {
       long timestamp = record.timestamp;
       for (int i = 0; i < schema.getFields().length; i++) {
@@ -192,7 +200,9 @@ public class TsFileManager implements IDataBaseManager {
 
 
   private Tablet convertToTablet(List<Record> records, Schema schema) {
-    Tablet tablet = new Tablet(records.get(0).tag, schemas, records.size());
+    String tag = records.get(0).tag;
+    Tablet tablet = new Tablet(tag, tagSchemasMap.get(tag), records.size());
+
     long[] timestamps = tablet.timestamps;
     Object[] values = tablet.values;
     tablet.bitMaps = new BitMap[values.length];
@@ -264,10 +274,8 @@ public class TsFileManager implements IDataBaseManager {
   public long count(String tagValue, String field, long startTime, long endTime) {
 
     long start = System.nanoTime();
-    try {
-      TsFileSequenceReader reader = new TsFileSequenceReader(tagToFilePath(tagValue));
+    try (TsFileReader readTsFile = new TsFileReader(new TsFileSequenceReader(tagToFilePath(tagValue)));) {
 
-      TsFileReader readTsFile = new TsFileReader(reader);
       ArrayList<Path> paths = new ArrayList<>();
       paths.add(new Path(tagValue, field));
       IExpression filter = new SingleSeriesExpression(new Path(tagValue + "." + field),
@@ -285,7 +293,7 @@ public class TsFileManager implements IDataBaseManager {
 
       logger.info("TsFile count result: {}", i);
     } catch (IOException e) {
-      e.printStackTrace();
+      logger.error("Cannot count", e);
     }
 
     return System.nanoTime() - start;
@@ -300,11 +308,11 @@ public class TsFileManager implements IDataBaseManager {
   public long close() {
     long start = System.nanoTime();
 
-    for (Entry<String, TsFileWriter> entry : writerMap.entrySet()) {
+    for (Entry<String, TsFileWriter> entry : tagWriterMap.entrySet()) {
       try {
         entry.getValue().close();
       } catch (IOException e) {
-        e.printStackTrace();
+        logger.warn("Close file failed: {}", entry.getKey());
       }
       totalFileSize += new File(tagToFilePath(entry.getKey())).length();
     }

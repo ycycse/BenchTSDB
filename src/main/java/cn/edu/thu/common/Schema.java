@@ -96,4 +96,13 @@ public class Schema {
   public Class<?>[] getTypes() {
     return types;
   }
+
+  @Override
+  public String toString() {
+    return "Schema{" +
+        "fields=" + Arrays.toString(fields) +
+        ", types=" + Arrays.toString(types) +
+        ", tag='" + tag + '\'' +
+        '}';
+  }
 }
