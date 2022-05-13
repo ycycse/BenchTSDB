@@ -60,7 +60,7 @@ public class CalculateThread implements Runnable{
 
       statistics.timeCost.addAndGet(totalTime);
       statistics.recordNum.addAndGet(lineNum);
-      statistics.pointNum.addAndGet(lineNum * config.FIELDS.length);
+      // statistics.pointNum.addAndGet(lineNum * config.FIELDS.length);
 
     } catch (Exception e) {
       e.printStackTrace();

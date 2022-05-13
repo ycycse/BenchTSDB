@@ -2,6 +2,7 @@ package cn.edu.thu.database.kairosdb;
 
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
+import cn.edu.thu.common.Schema;
 import cn.edu.thu.common.ThuHttpRequest;
 import cn.edu.thu.database.IDataBaseManager;
 import com.alibaba.fastjson.JSON;
@@ -35,14 +36,14 @@ public class KairosDBManager implements IDataBaseManager {
 
   @Override
   public void initServer() {
-    for (String sensor : config.FIELDS) {
-      try {
-        ThuHttpRequest.sendDelete(String.format(deleteUrl, sensor), "");
-      } catch (IOException e) {
-        logger.error("Delete metric {} failed when initializing KairosDBManager.", sensor);
-        e.printStackTrace();
-      }
-    }
+//    for (String sensor : config.FIELDS) {
+//      try {
+//        ThuHttpRequest.sendDelete(String.format(deleteUrl, sensor), "");
+//      } catch (IOException e) {
+//        logger.error("Delete metric {} failed when initializing KairosDBManager.", sensor);
+//        e.printStackTrace();
+//      }
+//    }
   }
 
   @Override
@@ -51,7 +52,7 @@ public class KairosDBManager implements IDataBaseManager {
   }
 
   @Override
-  public long insertBatch(List<Record> records) {
+  public long insertBatch(List<Record> records, Schema schema) {
     List<KairosDBPoint> points = new ArrayList<>();
 
     // convert to kairosdb data points
@@ -75,19 +76,20 @@ public class KairosDBManager implements IDataBaseManager {
   }
 
   private List<KairosDBPoint> convertToPoints(Record record) {
-    List<KairosDBPoint> points = new ArrayList<>();
-
-    Map<String, String> tags = new HashMap<>();
-    tags.put(Config.TAG_NAME, record.tag);
-    for (int i = 0; i < config.FIELDS.length; i++) {
-      KairosDBPoint point = new KairosDBPoint();
-      point.setName(config.FIELDS[i]);
-      point.setTimestamp(record.timestamp);
-      point.setValue(record.fields.get(i));
-      point.setTags(tags);
-      points.add(point);
-    }
-    return points;
+//    List<KairosDBPoint> points = new ArrayList<>();
+//
+//    Map<String, String> tags = new HashMap<>();
+//    tags.put(Config.TAG_NAME, record.tag);
+//    for (int i = 0; i < config.FIELDS.length; i++) {
+//      KairosDBPoint point = new KairosDBPoint();
+//      point.setName(config.FIELDS[i]);
+//      point.setTimestamp(record.timestamp);
+//      point.setValue(record.fields.get(i));
+//      point.setTags(tags);
+//      points.add(point);
+//    }
+//    return points;
+    return null;
   }
 
 

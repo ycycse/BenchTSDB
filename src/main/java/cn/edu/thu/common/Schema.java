@@ -23,17 +23,27 @@ import java.util.Arrays;
 import java.util.Objects;
 
 public class Schema {
-  public String[] fields = null;
-  public int[] precision = null;
+  private String[] fields = null;
+  private int[] precision = null;
+  private Class<?>[] types = null;
   // optional, if the schema is bound to a specify tag
-  public String tag = Config.DEFAULT_TAG;
+  private String tag = Config.DEFAULT_TAG;
+
+  public int getIndex(String fieldName) {
+    for (int i = 0; i < fields.length; i++) {
+      if (fieldName.equals(fields[i])) {
+        return i;
+      }
+    }
+    return -1;
+  }
 
   public Schema() {
   }
 
   public Schema(String[] fields, int[] precision) {
-    this.fields = fields;
-    this.precision = precision;
+    this.setFields(fields);
+    this.setPrecision(precision);
   }
 
   @Override
@@ -45,16 +55,45 @@ public class Schema {
       return false;
     }
     Schema schema = (Schema) o;
-    return Arrays.equals(fields, schema.fields) &&
-        Arrays.equals(precision, schema.precision) &&
-        Objects.equals(tag, schema.tag);
+    return Arrays.equals(getFields(), schema.getFields()) &&
+        Arrays.equals(getPrecision(), schema.getPrecision()) &&
+        Objects.equals(getTag(), schema.getTag());
   }
 
   @Override
   public int hashCode() {
-    int result = Objects.hash(tag);
-    result = 31 * result + Arrays.hashCode(fields);
-    result = 31 * result + Arrays.hashCode(precision);
+    int result = Objects.hash(getTag());
+    result = 31 * result + Arrays.hashCode(getFields());
+    result = 31 * result + Arrays.hashCode(getPrecision());
     return result;
+  }
+
+  public String[] getFields() {
+    return fields;
+  }
+
+  public void setFields(String[] fields) {
+    this.fields = fields;
+    this.types = new Class[fields.length];
+  }
+
+  public int[] getPrecision() {
+    return precision;
+  }
+
+  public void setPrecision(int[] precision) {
+    this.precision = precision;
+  }
+
+  public String getTag() {
+    return tag;
+  }
+
+  public void setTag(String tag) {
+    this.tag = tag;
+  }
+
+  public Class<?>[] getTypes() {
+    return types;
   }
 }

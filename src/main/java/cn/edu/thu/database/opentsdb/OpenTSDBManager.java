@@ -2,6 +2,7 @@ package cn.edu.thu.database.opentsdb;
 
 import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Config;
+import cn.edu.thu.common.Schema;
 import cn.edu.thu.common.ThuHttpRequest;
 import cn.edu.thu.database.IDataBaseManager;
 import com.alibaba.fastjson.JSON;
@@ -37,7 +38,7 @@ public class OpenTSDBManager implements IDataBaseManager {
     }
 
     @Override
-    public long insertBatch(List<Record> records) {
+    public long insertBatch(List<Record> records, Schema schema) {
 
         LinkedList<OpenTSDBPoint> openTSDBPoints = new LinkedList<>();
 
@@ -62,17 +63,17 @@ public class OpenTSDBManager implements IDataBaseManager {
     private LinkedList<OpenTSDBPoint> convertToRecord(Record record) {
         LinkedList<OpenTSDBPoint> models = new LinkedList<>();
 
-        for(int i = 0; i < config.FIELDS.length; i++) {
-            OpenTSDBPoint model = new OpenTSDBPoint();
-            model.setMetric(config.FIELDS[i]);
-            model.setTimestamp(record.timestamp);
-            model.setValue(record.fields.get(i));
-
-            Map<String, String> tags = new HashMap<>();
-            tags.put(Config.TAG_NAME, record.tag);
-            model.setTags(tags);
-            models.addLast(model);
-        }
+//        for(int i = 0; i < config.FIELDS.length; i++) {
+//            OpenTSDBPoint model = new OpenTSDBPoint();
+//            model.setMetric(config.FIELDS[i]);
+//            model.setTimestamp(record.timestamp);
+//            model.setValue(record.fields.get(i));
+//
+//            Map<String, String> tags = new HashMap<>();
+//            tags.put(Config.TAG_NAME, record.tag);
+//            model.setTags(tags);
+//            models.addLast(model);
+//        }
         return models;
     }
 

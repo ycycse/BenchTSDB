@@ -92,13 +92,13 @@ public class TsFileManager implements IDataBaseManager {
     try {
       writer = new TsFileWriter(file);
       Map<String, MeasurementSchema> template = new HashMap<>();
-      for (int i = 0; i < schema.fields.length; i++) {
+      for (int i = 0; i < schema.getFields().length; i++) {
         Map<String, String> props = new HashMap<>();
-        props.put(Encoder.MAX_POINT_NUMBER, schema.precision[i] + "");
-        MeasurementSchema measurementSchema = new MeasurementSchema(schema.fields[i],
+        props.put(Encoder.MAX_POINT_NUMBER, schema.getPrecision()[i] + "");
+        MeasurementSchema measurementSchema = new MeasurementSchema(schema.getFields()[i],
             TSDataType.DOUBLE,
             TSEncoding.RLE, CompressionType.SNAPPY, props);
-        template.put(schema.fields[i], measurementSchema);
+        template.put(schema.getFields()[i], measurementSchema);
         schemas.add(measurementSchema);
       }
       writer.registerSchemaTemplate("template", template, false);
@@ -154,7 +154,7 @@ public class TsFileManager implements IDataBaseManager {
     NonAlignedTablet tablet = new NonAlignedTablet(records.get(0).tag, schemas);
     for (Record record: records) {
       long timestamp = record.timestamp;
-      for (int i = 0; i < schema.fields.length; i++) {
+      for (int i = 0; i < schema.getFields().length; i++) {
         if (record.fields.get(i) != null) {
           tablet.addValue(schemas.get(i).getMeasurementId(), timestamp, record.fields.get(i));
         }
@@ -176,7 +176,7 @@ public class TsFileManager implements IDataBaseManager {
     for (Record record: records) {
       int row = tablet.rowSize++;
       timestamps[row] = record.timestamp;
-      for (int i = 0; i < schema.fields.length; i++) {
+      for (int i = 0; i < schema.getFields().length; i++) {
         double[] sensor = (double[]) values[i];
         if (record.fields.get(i) != null) {
           sensor[row] = (double) record.fields.get(i);
@@ -192,9 +192,9 @@ public class TsFileManager implements IDataBaseManager {
     List<TSRecord> tsRecords = new ArrayList<>();
     for (Record record : records) {
       TSRecord tsRecord = new TSRecord(record.timestamp, record.tag);
-      for (int i = 0; i < schema.fields.length; i++) {
+      for (int i = 0; i < schema.getFields().length; i++) {
         double floatField = (double) record.fields.get(i);
-        tsRecord.addTuple(new DoubleDataPoint(schema.fields[i], floatField));
+        tsRecord.addTuple(new DoubleDataPoint(schema.getFields()[i], floatField));
       }
       tsRecords.add(tsRecord);
     }

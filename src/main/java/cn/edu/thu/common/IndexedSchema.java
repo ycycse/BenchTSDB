@@ -24,18 +24,16 @@ import java.util.Map;
 
 public abstract class IndexedSchema extends Schema {
 
-
   public abstract Schema rebuildIndex();
-  public abstract int getIndex(String fieldName);
 
   public static class MapIndexedSchema extends IndexedSchema {
     private Map<String, Integer> fieldPosMap;
 
     @Override
     public MapIndexedSchema rebuildIndex() {
-      fieldPosMap = new HashMap<>(fields.length);
-      for (int i = 0; i < fields.length; i++) {
-        fieldPosMap.put(fields[i], i);
+      fieldPosMap = new HashMap<>(getFields().length);
+      for (int i = 0; i < getFields().length; i++) {
+        fieldPosMap.put(getFields()[i], i);
       }
 
       return this;

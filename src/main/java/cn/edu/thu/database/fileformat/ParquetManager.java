@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.orc.Writer;
 import org.apache.parquet.column.ParquetProperties;
 import org.apache.parquet.example.data.Group;
 import org.apache.parquet.example.data.simple.SimpleGroupFactory;
@@ -79,9 +78,9 @@ public class ParquetManager implements IDataBaseManager {
     if (!config.splitFileByDevice) {
       builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
     }
-    for (int i = 0; i < schema.fields.length; i++) {
+    for (int i = 0; i < schema.getFields().length; i++) {
       builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL,
-          PrimitiveType.PrimitiveTypeName.DOUBLE, schema.fields[i]));
+          PrimitiveType.PrimitiveTypeName.DOUBLE, schema.getFields()[i]));
     }
 
     return builder.named(schemaName);
@@ -152,10 +151,10 @@ public class ParquetManager implements IDataBaseManager {
       if (!config.splitFileByDevice) {
         group.add(Config.TAG_NAME, record.tag);
       }
-      for(int i = 0; i < schema.fields.length; i++) {
+      for(int i = 0; i < schema.getFields().length; i++) {
         if (record.fields.get(i) != null) {
           double floatV = (double) record.fields.get(i);
-          group.add(schema.fields[i], floatV);
+          group.add(schema.getFields()[i], floatV);
         }
       }
       groups.add(group);

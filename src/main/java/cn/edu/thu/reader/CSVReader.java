@@ -29,9 +29,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +65,7 @@ public class CSVReader extends BasicReader {
     try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
       String headerLine = reader.readLine();
       if (headerLine != null) {
-        return convertHeaderToSchema(headerLine);
+        return convertHeaderToSchema(headerLine, reader);
       }
     } catch (IOException e) {
       logger.warn("Cannot read schema from file {}, file skipped", file);
@@ -72,25 +74,95 @@ public class CSVReader extends BasicReader {
     return null;
   }
 
-  private Schema convertHeaderToSchema(String headerLine) {
+  private void inferTypeWithData(int fieldNum, Schema schema) throws IOException {
+    Set<Integer> unknownTypeIndices = new HashSet<>();
+    for (int i = 0; i < fieldNum; i++) {
+      unknownTypeIndices.add(i);
+    }
+
+    String line;
+    List<Integer> indexToRemove = new ArrayList<>();
+    while ((line = reader.readLine()) != null
+        && !unknownTypeIndices.isEmpty()
+        && cachedLines.size() < config.BATCH_SIZE) {
+      String[] lineSplit = line.split(separator);
+      indexToRemove.clear();
+
+      for (Integer unknownTypeIndex : unknownTypeIndices) {
+        String field = removeQuote(lineSplit[unknownTypeIndex + 1]);
+        Class<?> aClass = inferType(field);
+        if (aClass != null) {
+          schema.getTypes()[unknownTypeIndex] = aClass;
+          indexToRemove.add(unknownTypeIndex);
+        }
+      }
+
+      unknownTypeIndices.removeAll(indexToRemove);
+      cachedLines.add(line);
+    }
+
+    // if some fields cannot be inferred within a batch, assume them as text
+    for (Integer unknownTypeIndex : unknownTypeIndices) {
+      schema.getTypes()[unknownTypeIndex] = String.class;
+    }
+  }
+
+  private Schema convertHeaderToSchema(String headerLine, BufferedReader reader)
+      throws IOException {
     String[] split = headerLine.split(separator);
     Schema schema = new Schema();
 
     // the first field is fixed to time
     int fieldNum = split.length - 1;
-    schema.fields = new String[fieldNum];
-    schema.precision = new int[fieldNum];
+    schema.setFields(new String[fieldNum]);
+    schema.setPrecision(new int[fieldNum]);
 
     int devicePos = split[1].lastIndexOf('.');
-    schema.tag = split[1].substring(0, devicePos);
+    schema.setTag(split[1].substring(0, devicePos));
     for (int i = 1; i < split.length; i++) {
       String seriesName = split[i];
       String measurement = seriesName.substring(devicePos + 1);
-      schema.fields[i - 1] = measurement;
-      schema.precision[i - 1] = defaultPrecision;
+      schema.getFields()[i - 1] = measurement;
+      schema.getPrecision()[i - 1] = defaultPrecision;
+    }
+
+    // infer datatype using at most a batch of lines
+    if (overallSchema == null) {
+      inferTypeWithData(fieldNum, schema);
+    } else {
+      inferTypeWithOverallSchema(schema);
     }
 
     return schema;
+  }
+
+  private void inferTypeWithOverallSchema(Schema schema) {
+    for (int i = 0; i < schema.getFields().length; i++) {
+      String field = schema.getFields()[i];
+      schema.getTypes()[i] = overallSchema.getTypes()[overallSchema.getIndex(field)];
+    }
+  }
+
+  private Class<?> inferType(String field) {
+    if (field.equalsIgnoreCase("null")) {
+      return null;
+    }
+
+    try {
+      Long.parseLong(field);
+      return Long.class;
+    } catch (NumberFormatException ignore) {
+      // ignored
+    }
+
+    try {
+      Double.parseDouble(field);
+      return Double.class;
+    } catch (NumberFormatException ignore) {
+      // ignored
+    }
+
+    return String.class;
   }
 
   @Override
@@ -102,31 +174,51 @@ public class CSVReader extends BasicReader {
     return records;
   }
 
+  private String removeQuote(String s) {
+    if (s.length() >= 2 &&
+        s.startsWith("'") && s.endsWith("'") ||
+        s.startsWith("\"") && s.endsWith("\"")) {
+      return s.substring(1, s.length() - 1);
+    }
+    return s;
+  }
+
+  private Object parseField(String field, Schema schema, int index) {
+    if (field.isEmpty() || field.equalsIgnoreCase("null")) {
+      return null;
+    }
+
+    Class<?> type = schema.getTypes()[index];
+    if (type == Long.class) {
+      return Long.parseLong(field);
+    }
+    if (type == Double.class) {
+      return Double.parseDouble(field);
+    }
+    return field;
+  }
+
   private List<Object> fieldsWithCurrentFileSchema(String[] split) {
-    List<Object> fields = new ArrayList<>(currentFileSchema.fields.length);
+    List<Object> fields = new ArrayList<>(currentFileSchema.getFields().length);
     for (int i = 1; i < split.length; i++) {
-      if (split[i].isEmpty() || split[i].equalsIgnoreCase("null")) {
-        fields.add(null);
-      } else {
-        fields.add(Double.parseDouble(split[i]));
-      }
+      split[i] = removeQuote(split[i]);
+
+      fields.add(parseField(split[i], currentFileSchema, i - 1));
     }
     return fields;
   }
 
   private List<Object> fieldsWithOverallSchema(String[] split) {
-    List<Object> fields = new ArrayList<>(overallSchema.fields.length);
-    for (int i = 0; i < overallSchema.fields.length; i++) {
+    List<Object> fields = new ArrayList<>(overallSchema.getFields().length);
+    for (int i = 0; i < overallSchema.getFields().length; i++) {
       fields.add(null);
     }
 
-    for (int i = 0; i < currentFileSchema.fields.length; i++) {
-      int overallIndex = overallSchema.getIndex(currentFileSchema.fields[i]);
-      if (split[i].isEmpty() || split[i].equalsIgnoreCase("null")) {
-        fields.set(overallIndex, null);
-      } else {
-        fields.set(overallIndex, Double.parseDouble(split[i]));
-      }
+    for (int i = 1; i < split.length; i++) {
+      int overallIndex = overallSchema.getIndex(currentFileSchema.getFields()[i]);
+      split[i] = removeQuote(split[i]);
+
+      fields.set(overallIndex, parseField(split[i], overallSchema, overallIndex));
     }
     return fields;
   }
@@ -136,7 +228,7 @@ public class CSVReader extends BasicReader {
     Record record;
     String[] split = line.split(separator);
     long time = Long.parseLong(split[0]);
-    String tag = currentFileSchema.tag;
+    String tag = currentFileSchema.getTag();
     List<Object> fields;
 
     if (config.splitFileByDevice) {
@@ -153,7 +245,7 @@ public class CSVReader extends BasicReader {
   public void onFileOpened() {
     Schema fileSchema;
     try {
-      fileSchema = convertHeaderToSchema(reader.readLine());
+      fileSchema = convertHeaderToSchema(reader.readLine(), reader);
     } catch (IOException e) {
       logger.warn("Cannot read schema from {}, skipping", currentFile);
       return;
@@ -167,29 +259,53 @@ public class CSVReader extends BasicReader {
   }
 
   private static class SchemaSet {
+
     private final Map<String, Integer> fieldPrecisionMap = new HashMap<>();
+    private final Map<String, Class<?>> fieldTypeMap = new HashMap<>();
 
     public void union(Schema schema) {
       if (schema == null) {
         return;
       }
 
-      for (int i = 0; i < schema.fields.length; i++) {
+      for (int i = 0; i < schema.getFields().length; i++) {
         int finalI = i;
-        fieldPrecisionMap.compute(schema.fields[i], (s, p) -> Math.max(p == null ? 0 : p,
-            schema.precision[finalI]));
+        fieldPrecisionMap.compute(schema.getFields()[i], (s, p) -> Math.max(p == null ? 0 : p,
+            schema.getPrecision()[finalI]));
+        fieldTypeMap.compute(schema.getFields()[i], (s, t) -> {
+          Class<?> newType = schema.getTypes()[schema.getIndex(s)];
+          return mergeType(t, newType);
+        });
       }
+    }
+
+    private Class<?> mergeType(Class<?> t1, Class<?> t2) {
+      if (t1 == null && t2 == null) {
+        return null;
+      }
+      if (t1 == null) {
+        return t2;
+      }
+      if (t2 ==null) {
+        return t1;
+      }
+
+      if (t1 != t2) {
+        return String.class;
+      }
+      return t1;
     }
 
     public IndexedSchema toSchema() {
       MapIndexedSchema schema = new MapIndexedSchema();
-      schema.fields = new String[fieldPrecisionMap.size()];
-      schema.precision = new int[fieldPrecisionMap.size()];
+      schema.setFields(new String[fieldPrecisionMap.size()]);
+      schema.setPrecision(new int[fieldPrecisionMap.size()]);
 
       int index = 0;
       for (Entry<String, Integer> entry : fieldPrecisionMap.entrySet()) {
-        schema.fields[index] = entry.getKey();
-        schema.precision[index ++] = entry.getValue();
+        schema.getFields()[index] = entry.getKey();
+        schema.getTypes()[index] = fieldTypeMap.getOrDefault(entry.getKey(), String.class);
+        schema.getPrecision()[index++] = entry.getValue();
       }
 
       return schema.rebuildIndex();

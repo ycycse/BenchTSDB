@@ -100,7 +100,7 @@ public class ORCManager implements IDataBaseManager {
         device.setVal(i, record.tag.getBytes(StandardCharsets.UTF_8));
       }
 
-      for (int j = 0; j < schema.fields.length; j++) {
+      for (int j = 0; j < schema.getFields().length; j++) {
         DoubleColumnVector v;
         if (!config.splitFileByDevice) {
           v = (DoubleColumnVector) batch.cols[j + 2];
@@ -156,8 +156,8 @@ public class ORCManager implements IDataBaseManager {
       s = "struct<timestamp:bigint,deviceId:string";
     }
 
-    for (int i = 0; i < schema.fields.length; i++) {
-      s += ("," + schema.fields[i] + ":" + "DOUBLE");
+    for (int i = 0; i < schema.getFields().length; i++) {
+      s += ("," + schema.getFields()[i] + ":" + "DOUBLE");
     }
     s += ">";
     return s;

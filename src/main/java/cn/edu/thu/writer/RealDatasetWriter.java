@@ -69,7 +69,7 @@ public class RealDatasetWriter implements Runnable {
         List<Record> batch = reader.next();
         statistics.timeCost.addAndGet(database.insertBatch(batch, reader.getCurrentSchema()));
         statistics.recordNum.addAndGet(batch.size());
-        statistics.pointNum.addAndGet(batch.size() * reader.getCurrentSchema().fields.length);
+        statistics.pointNum.addAndGet(batch.size() * reader.getCurrentSchema().getFields().length);
       }
 
       statistics.timeCost.addAndGet(database.flush());

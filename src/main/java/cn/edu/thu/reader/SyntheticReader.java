@@ -51,11 +51,11 @@ public class SyntheticReader extends BasicReader {
     }
 
     schema = new Schema();
-    schema.fields = new String[config.syntheticMeasurementNum];
-    schema.precision = new int[config.syntheticMeasurementNum];
+    schema.setFields(new String[config.syntheticMeasurementNum]);
+    schema.setPrecision(new int[config.syntheticMeasurementNum]);
     for (int i = 0; i < config.syntheticMeasurementNum; i++) {
-      schema.fields[i] = "sensor_" + i;
-      schema.precision[i] = 4;
+      schema.getFields()[i] = "sensor_" + i;
+      schema.getPrecision()[i] = 4;
     }
   }
 

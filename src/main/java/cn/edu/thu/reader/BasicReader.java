@@ -89,7 +89,7 @@ public abstract class BasicReader implements Iterator<List<Record>> {
 
         // read a line, cache it
         cachedLines.add(line);
-        if (cachedLines.size() == config.BATCH_SIZE) {
+        if (cachedLines.size() >= config.BATCH_SIZE) {
           break;
         }
       }
