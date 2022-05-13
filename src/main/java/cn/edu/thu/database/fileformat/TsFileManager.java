@@ -171,7 +171,7 @@ public class TsFileManager implements IDataBaseManager {
 
   private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
       Schema schema) {
-    NonAlignedTablet tablet = new NonAlignedTablet(records.get(0).tag, schemas);
+    NonAlignedTablet tablet = new NonAlignedTablet(records.get(0).tag, schemas, records.size());
     for (Record record: records) {
       long timestamp = record.timestamp;
       for (int i = 0; i < schema.getFields().length; i++) {
