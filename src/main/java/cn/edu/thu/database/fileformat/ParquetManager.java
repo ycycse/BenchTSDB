@@ -99,9 +99,9 @@ public class ParquetManager implements IDataBaseManager {
 
   private String tagToFilePath(String tag) {
     if (config.splitFileByDevice) {
-      return tag + "_" + filePath;
+      return filePath + "_" + tag;
     } else {
-      return Config.DEFAULT_TAG + "_" + filePath;
+      return filePath + "_" + Config.DEFAULT_TAG;
     }
   }
 
