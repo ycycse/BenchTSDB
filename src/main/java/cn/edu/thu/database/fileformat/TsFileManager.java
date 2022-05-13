@@ -24,6 +24,7 @@ import org.apache.iotdb.tsfile.read.expression.impl.SingleSeriesExpression;
 import org.apache.iotdb.tsfile.read.filter.TimeFilter;
 import org.apache.iotdb.tsfile.read.filter.operator.AndFilter;
 import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
+import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.utils.BitMap;
 import org.apache.iotdb.tsfile.write.TsFileWriter;
 import org.apache.iotdb.tsfile.write.record.NonAlignedTablet;
@@ -33,6 +34,7 @@ import org.apache.iotdb.tsfile.write.record.datapoint.DoubleDataPoint;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.collection.immutable.IntMap.Bin;
 
 public class TsFileManager implements IDataBaseManager {
 
@@ -176,7 +178,12 @@ public class TsFileManager implements IDataBaseManager {
       long timestamp = record.timestamp;
       for (int i = 0; i < schema.getFields().length; i++) {
         if (record.fields.get(i) != null) {
-          tablet.addValue(schemas.get(i).getMeasurementId(), timestamp, record.fields.get(i));
+          if (schema.getTypes()[i] != String.class) {
+            tablet.addValue(schemas.get(i).getMeasurementId(), timestamp, record.fields.get(i));
+          } else {
+            tablet.addValue(schemas.get(i).getMeasurementId(), timestamp,
+                new Binary((String) record.fields.get(i)));
+          }
         }
       }
     }
@@ -197,14 +204,46 @@ public class TsFileManager implements IDataBaseManager {
       int row = tablet.rowSize++;
       timestamps[row] = record.timestamp;
       for (int i = 0; i < schema.getFields().length; i++) {
-        double[] sensor = (double[]) values[i];
-        if (record.fields.get(i) != null) {
-          sensor[row] = (double) record.fields.get(i);
-          tablet.bitMaps[i].mark(row);
-        }
+        addToColumn(tablet.values[i], row, record.fields.get(i), tablet.bitMaps[i],
+            schema.getTypes()[i]);
       }
     }
     return tablet;
+  }
+
+  private void addToColumn(Object column, int rowIndex, Object field, BitMap bitMap,
+      Class<?> type) {
+    if (type == Long.class) {
+      addToLongColumn(column, rowIndex, field, bitMap);
+    } else if (type == Double.class) {
+      addToDoubleColumn(column, rowIndex, field, bitMap);
+    } else {
+      addToTextColumn(column, rowIndex, field, bitMap);
+    }
+  }
+
+  private void addToDoubleColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
+    double[] sensor = (double[]) column;
+    if (field != null) {
+      sensor[rowIndex] = (double) field;
+      bitMap.mark(rowIndex);
+    }
+  }
+
+  private void addToLongColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
+    long[] sensor = (long[]) column;
+    if (field != null) {
+      sensor[rowIndex] = (long) field;
+      bitMap.mark(rowIndex);
+    }
+  }
+
+  private void addToTextColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
+    Binary[] sensor = (Binary[]) column;
+    if (field != null) {
+      sensor[rowIndex] = new Binary((String) field);
+      bitMap.mark(rowIndex);
+    }
   }
 
 
