@@ -80,6 +80,67 @@ public class ORCManager implements IDataBaseManager {
     return writer;
   }
 
+  private void insertDoubleColumn(VectorizedRowBatch batch, int colIndex, int rowIndex, Record record) {
+    DoubleColumnVector v;
+    if (!config.splitFileByDevice) {
+      v = (DoubleColumnVector) batch.cols[colIndex + 2];
+    } else {
+      v = (DoubleColumnVector) batch.cols[colIndex + 1];
+    }
+    if (record.fields.get(colIndex) != null) {
+      v.vector[rowIndex] = (double) record.fields.get(colIndex);
+      v.isNull[rowIndex] = false;
+    } else {
+      v.isNull[rowIndex] = true;
+      v.noNulls = false;
+    }
+  }
+
+  private void insertLongColumn(VectorizedRowBatch batch, int colIndex, int rowIndex,
+      Record record) {
+    LongColumnVector v;
+    if (!config.splitFileByDevice) {
+      v = (LongColumnVector) batch.cols[colIndex + 2];
+    } else {
+      v = (LongColumnVector) batch.cols[colIndex + 1];
+    }
+    if (record.fields.get(colIndex) != null) {
+      v.vector[rowIndex] = (long) record.fields.get(colIndex);
+      v.isNull[rowIndex] = false;
+    } else {
+      v.isNull[rowIndex] = true;
+      v.noNulls = false;
+    }
+  }
+
+  private void insertStringColumn(VectorizedRowBatch batch, int colIndex, int rowIndex,
+      Record record) {
+    BytesColumnVector v;
+    if (!config.splitFileByDevice) {
+      v = (BytesColumnVector) batch.cols[colIndex + 2];
+    } else {
+      v = (BytesColumnVector) batch.cols[colIndex + 1];
+    }
+    if (record.fields.get(colIndex) != null) {
+      v.vector[rowIndex] = ((String) record.fields.get(colIndex)).getBytes();
+      v.isNull[rowIndex] = false;
+    } else {
+      v.isNull[rowIndex] = true;
+      v.noNulls = false;
+    }
+  }
+
+  private void insertColumn(VectorizedRowBatch batch, int colIndex, int rowIndex,
+      Record record, Class<?> type) {
+    if (type == Long.class) {
+      insertLongColumn(batch, colIndex, rowIndex, record);
+    } else if (type == Double.class) {
+      insertDoubleColumn(batch, colIndex, rowIndex, record);
+    } else {
+      insertStringColumn(batch, colIndex, rowIndex, record);
+    }
+  }
+
   @Override
   public long insertBatch(List<Record> records, Schema schema) {
 
@@ -101,19 +162,7 @@ public class ORCManager implements IDataBaseManager {
       }
 
       for (int j = 0; j < schema.getFields().length; j++) {
-        DoubleColumnVector v;
-        if (!config.splitFileByDevice) {
-          v = (DoubleColumnVector) batch.cols[j + 2];
-        } else {
-          v = (DoubleColumnVector) batch.cols[j + 1];
-        }
-        if (record.fields.get(j) != null) {
-          v.vector[i] = (double) record.fields.get(j);
-          v.isNull[i] = false;
-        } else {
-          v.isNull[i] = true;
-          v.noNulls = false;
-        }
+        insertColumn(batch, j, i, record, schema.getTypes()[j]);
       }
 
       batch.size++;
@@ -157,17 +206,27 @@ public class ORCManager implements IDataBaseManager {
     }
 
     for (int i = 0; i < schema.getFields().length; i++) {
-      s += ("," + schema.getFields()[i] + ":" + "DOUBLE");
+      s += ("," + schema.getFields()[i] + ":" + dataTypeString(schema.getTypes()[i]));
     }
     s += ">";
     return s;
   }
 
-  private String getReadSchema(String field) {
+  private String dataTypeString(Class<?> type) {
+    if (type == Long.class) {
+      return "bigint";
+    }
+    if (type == Double.class) {
+      return "DOUBLE";
+    }
+    return "string";
+  }
+
+  private String getReadSchema(String field, Class<?> filedType) {
     if (!config.splitFileByDevice) {
-      return "struct<timestamp:bigint,deviceId:string," + field + ":DOUBLE>";
+      return "struct<timestamp:bigint,deviceId:string," + field + ":" + dataTypeString(filedType) + ">";
     } else {
-      return "struct<timestamp:bigint," + field + ":DOUBLE>";
+      return "struct<timestamp:bigint," + field + ":" + dataTypeString(filedType) + ">";
     }
   }
 
@@ -176,7 +235,8 @@ public class ORCManager implements IDataBaseManager {
 
     long start = System.nanoTime();
 
-    String schema = getReadSchema(field);
+    // todo add type in parameter and config
+    String schema = getReadSchema(field, Double.class);
     try {
       Reader reader = OrcFile.createReader(new Path(tagToFilePath(tagValue)),
           OrcFile.readerOptions(new Configuration()));
@@ -200,10 +260,10 @@ public class ORCManager implements IDataBaseManager {
             if (deviceId.endsWith(tagValue)) {
               result++;
             }
-            double fieldValue = ((DoubleColumnVector) batch.cols[2]).vector[r];
+            // double fieldValue = ((DoubleColumnVector) batch.cols[2]).vector[r];
           } else {
             result++;
-            double fieldValue = ((DoubleColumnVector) batch.cols[1]).vector[r];
+            // double fieldValue = ((DoubleColumnVector) batch.cols[1]).vector[r];
           }
         }
       }

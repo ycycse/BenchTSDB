@@ -27,6 +27,7 @@ import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.apache.parquet.io.api.Binary;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.PrimitiveType;
+import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName;
 import org.apache.parquet.schema.Type;
 import org.apache.parquet.schema.Types;
 import org.slf4j.Logger;
@@ -80,10 +81,20 @@ public class ParquetManager implements IDataBaseManager {
     }
     for (int i = 0; i < schema.getFields().length; i++) {
       builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL,
-          PrimitiveType.PrimitiveTypeName.DOUBLE, schema.getFields()[i]));
+          toTypeName(schema.getTypes()[i]), schema.getFields()[i]));
     }
 
     return builder.named(schemaName);
+  }
+
+  private PrimitiveType.PrimitiveTypeName toTypeName(Class<?> type) {
+    if (type == Long.class) {
+      return PrimitiveTypeName.INT64;
+    }
+    if (type == Double.class) {
+      return PrimitiveTypeName.BOOLEAN;
+    }
+    return PrimitiveTypeName.BINARY;
   }
 
   private String tagToFilePath(String tag) {
@@ -151,15 +162,27 @@ public class ParquetManager implements IDataBaseManager {
       if (!config.splitFileByDevice) {
         group.add(Config.TAG_NAME, record.tag);
       }
+
       for(int i = 0; i < schema.getFields().length; i++) {
-        if (record.fields.get(i) != null) {
-          double floatV = (double) record.fields.get(i);
-          group.add(schema.getFields()[i], floatV);
-        }
+        writeColumn(group, record.fields.get(i), schema.getFields()[i], schema.getTypes()[i]);
       }
       groups.add(group);
     }
     return groups;
+  }
+
+  private void writeColumn(Group group, Object field, String fieldName, Class<?> type) {
+    if (field != null) {
+      if (type == Double.class) {
+        double floatV = (double) field;
+        group.add(fieldName, floatV);
+      } else if (type == Long.class) {
+        long longV = (long) field;
+        group.add(fieldName, longV);
+      } else {
+        group.add(fieldName, field.toString());
+      }
+    }
   }
 
   @Override
@@ -182,6 +205,7 @@ public class ParquetManager implements IDataBaseManager {
     if (!config.splitFileByDevice) {
       builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
     }
+    // todo add field type
     builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.DOUBLE, field));
 
     MessageType querySchema = builder.named(schemaName);

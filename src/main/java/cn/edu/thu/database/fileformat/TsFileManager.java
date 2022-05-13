@@ -96,8 +96,8 @@ public class TsFileManager implements IDataBaseManager {
         Map<String, String> props = new HashMap<>();
         props.put(Encoder.MAX_POINT_NUMBER, schema.getPrecision()[i] + "");
         MeasurementSchema measurementSchema = new MeasurementSchema(schema.getFields()[i],
-            TSDataType.DOUBLE,
-            TSEncoding.RLE, CompressionType.SNAPPY, props);
+            toTsDataType(schema.getTypes()[i]),
+            toTsEncoding(schema.getTypes()[i]), CompressionType.SNAPPY, props);
         template.put(schema.getFields()[i], measurementSchema);
         schemas.add(measurementSchema);
       }
@@ -106,6 +106,26 @@ public class TsFileManager implements IDataBaseManager {
       e.printStackTrace();
     }
     return writer;
+  }
+
+  private TSDataType toTsDataType(Class<?> type) {
+    if (type == Long.class) {
+      return TSDataType.INT64;
+    } else if (type == Double.class) {
+      return TSDataType.DOUBLE;
+    } else {
+      return TSDataType.TEXT;
+    }
+  }
+
+  private TSEncoding toTsEncoding(Class<?> type) {
+    if (type == Long.class) {
+      return TSEncoding.RLE;
+    } else if (type == Double.class) {
+      return TSEncoding.GORILLA;
+    } else {
+      return TSEncoding.PLAIN;
+    }
   }
 
   private TsFileWriter getWriter(String tag, Schema schema) {
