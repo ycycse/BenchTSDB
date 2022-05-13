@@ -101,7 +101,7 @@ public class TsFileManager implements IDataBaseManager {
         template.put(schema.getFields()[i], measurementSchema);
         schemas.add(measurementSchema);
       }
-      writer.registerSchemaTemplate("template", template, false);
+      writer.registerSchemaTemplate(schema.getTag(), template, config.useAlignedSeries);
     } catch (Exception e) {
       e.printStackTrace();
     }

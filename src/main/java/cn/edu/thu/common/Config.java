@@ -60,6 +60,7 @@ public class Config {
 
   // TsFile configs
   public boolean useAlignedTablet = false;
+  public boolean useAlignedSeries = false;
 
   // for query
 
@@ -140,6 +141,8 @@ public class Config {
 
     useAlignedTablet = Boolean.parseBoolean(properties.getOrDefault("use_aligned_tablet",
         useAlignedTablet).toString());
+    useAlignedSeries = Boolean.parseBoolean(properties.getOrDefault("use_aligned_series",
+        useAlignedSeries).toString());
 
     BEGIN_FILE = Integer.parseInt(properties.getOrDefault("BEGIN_FILE", BEGIN_FILE).toString());
     END_FILE = Integer.parseInt(properties.getOrDefault("END_FILE", END_FILE).toString());
