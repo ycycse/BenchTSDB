@@ -13,6 +13,7 @@ import java.util.List;
 
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.orc.*;
@@ -37,10 +38,13 @@ public class ORCManager implements IDataBaseManager {
   private static Logger logger = LoggerFactory.getLogger(ORCManager.class);
 
   private Map<String, Writer> writerMap = new HashMap<>();
+  private String lastTag;
   private Config config;
   private String filePath;
 
   private long totalFileSize = 0;
+
+  private boolean closeOnTagChanged = true;
 
   public ORCManager(Config config) {
     this.config = config;
@@ -147,6 +151,10 @@ public class ORCManager implements IDataBaseManager {
     long start = System.nanoTime();
 
     String tag = records.get(0).tag;
+    if(closeOnTagChanged && !Objects.equals(tag, lastTag)) {
+      close();
+    }
+
     Writer writer = getWriter(tag, schema);
 
     VectorizedRowBatch batch = writer.getSchema().createRowBatch(records.size());
@@ -178,6 +186,7 @@ public class ORCManager implements IDataBaseManager {
       }
     }
 
+    lastTag = tag;
     return System.nanoTime() - start;
   }
 

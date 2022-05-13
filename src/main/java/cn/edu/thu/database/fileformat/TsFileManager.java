@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -40,9 +41,12 @@ public class TsFileManager implements IDataBaseManager {
   private static Logger logger = LoggerFactory.getLogger(TsFileManager.class);
   private Map<String, TsFileWriter> tagWriterMap = new HashMap<>();
   private Map<String, List<MeasurementSchema>> tagSchemasMap = new HashMap<>();
+  private String lastTag;
   private String filePath;
   private Config config;
   private long totalFileSize;
+
+  private boolean closeOnTagChanged = true;
 
   public TsFileManager(Config config) {
     this.config = config;
@@ -146,13 +150,19 @@ public class TsFileManager implements IDataBaseManager {
   @Override
   public long insertBatch(List<Record> records, Schema schema) {
     long start = System.nanoTime();
-    TsFileWriter writer = getWriter(records.get(0).tag, schema);
+    String tag = records.get(0).tag;
+    if (closeOnTagChanged && !Objects.equals(tag, lastTag)) {
+      close();
+    }
+
+    TsFileWriter writer = getWriter(tag, schema);
     if (config.useAlignedTablet) {
       insertBatchAligned(records, writer, schema);
     } else {
       insertBatchNonAligned(records, writer, schema);
     }
 
+    lastTag = tag;
     return System.nanoTime() - start;
   }
 
@@ -316,6 +326,9 @@ public class TsFileManager implements IDataBaseManager {
       }
       totalFileSize += new File(tagToFilePath(entry.getKey())).length();
     }
+
+    tagWriterMap.clear();
+    tagSchemasMap.clear();
 
     logger.info("Total file size: {}", totalFileSize / (1024*1024.0));
     return System.nanoTime() - start;

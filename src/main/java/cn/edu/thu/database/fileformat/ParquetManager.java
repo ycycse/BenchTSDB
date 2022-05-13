@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.column.ParquetProperties;
@@ -48,10 +49,13 @@ public class ParquetManager implements IDataBaseManager {
   private static Logger logger = LoggerFactory.getLogger(ParquetManager.class);
   private Map<String, ParquetWriter> writerMap = new HashMap<>();
   private Map<String, SimpleGroupFactory> groupFactoryMap = new HashMap<>();
+  private String lastTag;
   private Config config;
   private String filePath;
   private String schemaName = "defaultSchema";
   private long totalFileSize = 0;
+
+  private boolean closeOnTagChanged = true;
 
   public ParquetManager(Config config) {
     this.config = config;
@@ -138,8 +142,12 @@ public class ParquetManager implements IDataBaseManager {
   @Override
   public long insertBatch(List<Record> records, Schema schema) {
     long start = System.nanoTime();
+    String tag = records.get(0).tag;
+    if (closeOnTagChanged && !Objects.equals(tag, lastTag)) {
+      close();
+    }
 
-    ParquetWriter writer = getWriter(records.get(0).tag, schema);
+    ParquetWriter writer = getWriter(tag, schema);
     List<Group> groups = convertRecords(records, schema);
     for(Group group: groups) {
       try {
@@ -149,6 +157,7 @@ public class ParquetManager implements IDataBaseManager {
       }
     }
 
+    lastTag = tag;
     return System.nanoTime() - start;
   }
 
