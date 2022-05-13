@@ -84,7 +84,7 @@ public class CSVReader extends BasicReader {
     List<Integer> indexToRemove = new ArrayList<>();
     while ((line = reader.readLine()) != null
         && !unknownTypeIndices.isEmpty()
-        && cachedLines.size() < config.BATCH_SIZE) {
+        && cachedLines != null && cachedLines.size() < config.BATCH_SIZE) {
       String[] lineSplit = line.split(separator);
       indexToRemove.clear();
 
@@ -98,7 +98,9 @@ public class CSVReader extends BasicReader {
       }
 
       unknownTypeIndices.removeAll(indexToRemove);
-      cachedLines.add(line);
+      if (cachedLines != null) {
+        cachedLines.add(line);
+      }
     }
 
     // if some fields cannot be inferred within a batch, assume them as text
