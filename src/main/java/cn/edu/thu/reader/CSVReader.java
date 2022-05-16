@@ -66,7 +66,7 @@ public class CSVReader extends BasicReader {
     try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
       String headerLine = reader.readLine();
       if (headerLine != null) {
-        return convertHeaderToSchema(headerLine, reader);
+        return convertHeaderToSchema(headerLine, reader, file);
       }
     } catch (IOException e) {
       logger.warn("Cannot read schema from file {}, file skipped", file);
@@ -110,7 +110,7 @@ public class CSVReader extends BasicReader {
     }
   }
 
-  private Schema convertHeaderToSchema(String headerLine, BufferedReader reader)
+  private Schema convertHeaderToSchema(String headerLine, BufferedReader reader, String fileName)
       throws IOException {
     String[] split = headerLine.split(separator);
     Schema schema = new Schema();
@@ -121,10 +121,17 @@ public class CSVReader extends BasicReader {
     schema.setPrecision(new int[fieldNum]);
 
     int devicePos = split[1].lastIndexOf('.');
-    schema.setTag(split[1].substring(0, devicePos));
+    String tag;
+    if (devicePos == -1) {
+      tag = fileNameToTag(fileName);
+    } else {
+      tag = split[1].substring(0, devicePos);
+    }
+
+    schema.setTag(tag);
     for (int i = 1; i < split.length; i++) {
-      String seriesName = split[i];
-      String measurement = seriesName.substring(devicePos + 1);
+      String columnName = split[i];
+      String measurement = devicePos != -1 ? columnName.substring(devicePos + 1) : columnName;
       schema.getFields()[i - 1] = measurement;
       schema.getPrecision()[i - 1] = defaultPrecision;
     }
@@ -137,6 +144,11 @@ public class CSVReader extends BasicReader {
     }
 
     return schema;
+  }
+
+  private String fileNameToTag(String fileName) {
+    int suffixPos = fileName.lastIndexOf('.');
+    return fileName.substring(0, suffixPos);
   }
 
   private void inferTypeWithOverallSchema(Schema schema) {
@@ -248,7 +260,7 @@ public class CSVReader extends BasicReader {
   public void onFileOpened() {
     Schema fileSchema;
     try {
-      fileSchema = convertHeaderToSchema(reader.readLine(), reader);
+      fileSchema = convertHeaderToSchema(reader.readLine(), reader, currentFile);
       logger.info("Current file schema: {}", fileSchema);
     } catch (IOException e) {
       logger.warn("Cannot read schema from {}, skipping", currentFile);
