@@ -111,7 +111,7 @@ public class TsFileManager implements IDataBaseManager {
       }
       tagSchemasMap.put(tag, schemas);
       writer.registerSchemaTemplate(schema.getTag(), template, config.useAlignedSeries);
-      logger.info("Created a writer of {}", schema);
+      logger.info("Created a writer of {}", tag);
       logger.debug("Writer schema {}", schema);
     } catch (Exception e) {
       logger.error("Cannot create writer with {}, schema {}", tag, schema);
@@ -181,7 +181,11 @@ public class TsFileManager implements IDataBaseManager {
       TsFileWriter writer, Schema schema) {
     Tablet tablet = convertToTablet(records, schema);
     try {
-      writer.write(tablet);
+      if (config.useAlignedSeries) {
+        writer.writeAligned(tablet);
+      } else {
+        writer.write(tablet);
+      }
     } catch (Exception e) {
       logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
     }

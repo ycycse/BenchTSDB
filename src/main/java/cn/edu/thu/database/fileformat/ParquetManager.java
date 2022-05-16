@@ -169,7 +169,8 @@ public class ParquetManager implements IDataBaseManager {
 
   private List<Group> convertRecords(List<Record> records, Schema schema) {
     List<Group> groups = new ArrayList<>();
-    SimpleGroupFactory simpleGroupFactory = groupFactoryMap.get(records.get(0).tag);
+    SimpleGroupFactory simpleGroupFactory = config.splitFileByDevice ?
+        groupFactoryMap.get(records.get(0).tag) : groupFactoryMap.get(Config.DEFAULT_TAG);
     for(Record record: records) {
       Group group = simpleGroupFactory.newGroup();
       group.add(Config.TIME_NAME, record.timestamp);
