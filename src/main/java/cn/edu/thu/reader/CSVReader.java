@@ -25,6 +25,7 @@ import cn.edu.thu.common.IndexedSchema.MapIndexedSchema;
 import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Schema;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -66,7 +67,7 @@ public class CSVReader extends BasicReader {
     try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
       String headerLine = reader.readLine();
       if (headerLine != null) {
-        return convertHeaderToSchema(headerLine, reader, file);
+        return convertHeaderToSchema(headerLine, reader, file, false);
       }
     } catch (IOException e) {
       logger.warn("Cannot read schema from file {}, file skipped", file);
@@ -75,7 +76,8 @@ public class CSVReader extends BasicReader {
     return null;
   }
 
-  private void inferTypeWithData(int fieldNum, Schema schema, BufferedReader reader) throws IOException {
+  private void inferTypeWithData(int fieldNum, Schema schema, BufferedReader reader,
+      boolean fillCache) throws IOException {
     Set<Integer> unknownTypeIndices = new HashSet<>();
     for (int i = 0; i < fieldNum; i++) {
       unknownTypeIndices.add(i);
@@ -83,9 +85,9 @@ public class CSVReader extends BasicReader {
 
     String line;
     List<Integer> indexToRemove = new ArrayList<>();
-    while ((line = this.reader.readLine()) != null
+    while ((line = reader.readLine()) != null
         && !unknownTypeIndices.isEmpty()
-        && cachedLines != null && cachedLines.size() < config.BATCH_SIZE) {
+        && (!fillCache || cachedLines.size() < config.BATCH_SIZE)) {
       String[] lineSplit = line.split(separator);
       indexToRemove.clear();
 
@@ -99,7 +101,7 @@ public class CSVReader extends BasicReader {
       }
 
       unknownTypeIndices.removeAll(indexToRemove);
-      if (cachedLines != null) {
+      if (fillCache) {
         cachedLines.add(line);
       }
     }
@@ -110,7 +112,8 @@ public class CSVReader extends BasicReader {
     }
   }
 
-  private Schema convertHeaderToSchema(String headerLine, BufferedReader reader, String fileName)
+  private Schema convertHeaderToSchema(String headerLine, BufferedReader reader, String fileName,
+      boolean fillCache)
       throws IOException {
     String[] split = headerLine.split(separator);
     Schema schema = new Schema();
@@ -123,7 +126,7 @@ public class CSVReader extends BasicReader {
     int devicePos = split[1].lastIndexOf('.');
     String tag;
     if (devicePos == -1) {
-      tag = fileNameToTag(fileName);
+      tag = fileNameToTag(new File(fileName).getName());
     } else {
       tag = split[1].substring(0, devicePos);
     }
@@ -138,7 +141,7 @@ public class CSVReader extends BasicReader {
 
     // infer datatype using at most a batch of lines
     if (overallSchema == null) {
-      inferTypeWithData(fieldNum, schema, reader);
+      inferTypeWithData(fieldNum, schema, reader, fillCache);
     } else {
       inferTypeWithOverallSchema(schema);
     }
@@ -260,7 +263,7 @@ public class CSVReader extends BasicReader {
   public void onFileOpened() {
     Schema fileSchema;
     try {
-      fileSchema = convertHeaderToSchema(reader.readLine(), reader, currentFile);
+      fileSchema = convertHeaderToSchema(reader.readLine(), reader, currentFile, true);
       logger.info("Current file schema: {}", fileSchema);
     } catch (IOException e) {
       logger.warn("Cannot read schema from {}, skipping", currentFile);

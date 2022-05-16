@@ -33,6 +33,7 @@ public abstract class BasicReader implements Iterator<List<Record>> {
   public BasicReader(Config config, List<String> files) {
     this.config = config;
     this.files = files;
+    cachedLines = new ArrayList<>(config.BATCH_SIZE);
     try {
       reader = new BufferedReader(new FileReader(files.get(currentFileIndex)));
       currentFile = files.get(currentFileIndex);
@@ -42,7 +43,6 @@ public abstract class BasicReader implements Iterator<List<Record>> {
       logger.error("meet exception when init file: {}", currentFile);
       e.printStackTrace();
     }
-    cachedLines = new ArrayList<>(config.BATCH_SIZE);
   }
 
   public boolean hasNext() {
