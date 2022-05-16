@@ -106,7 +106,7 @@ public class MainLoad {
 
     logger.info("All done! Total records:{}, points:{}, time:{} ms, speed:{}",
         statistics.recordNum,
-        statistics.pointNum, (float)statistics.timeCost.get() / 1000_1000F, statistics.speed());
+        statistics.pointNum, (float)statistics.timeCost.get() / 1000_000F, statistics.speed());
 
   }
 
