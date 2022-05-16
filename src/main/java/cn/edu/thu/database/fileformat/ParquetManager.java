@@ -125,6 +125,7 @@ public class ParquetManager implements IDataBaseManager {
     new File(filePath).delete();
     try {
       groupFactoryMap.put(tag, new SimpleGroupFactory(messageType));
+      logger.info("Created a writer for {}", tag);
       return new ParquetWriter(new Path(filePath), groupWriteSupport,
           CompressionCodecName.SNAPPY,
           ParquetWriter.DEFAULT_BLOCK_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE,
@@ -137,7 +138,7 @@ public class ParquetManager implements IDataBaseManager {
 
   private ParquetWriter getWriter(String tag, Schema schema) {
     if (!config.splitFileByDevice) {
-      return writerMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(tag, schema));
+      return writerMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(t, schema));
     } else {
       return writerMap.computeIfAbsent(tag, t -> createWriter(tag, schema));
     }
