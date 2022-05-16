@@ -50,6 +50,7 @@ public class CSVReader extends BasicReader {
     super(config, files);
     if (!config.splitFileByDevice) {
       overallSchema = collectSchemaFromFiles(files);
+      logger.info("The overall schema is: {}", overallSchema);
     }
   }
 
@@ -74,7 +75,7 @@ public class CSVReader extends BasicReader {
     return null;
   }
 
-  private void inferTypeWithData(int fieldNum, Schema schema) throws IOException {
+  private void inferTypeWithData(int fieldNum, Schema schema, BufferedReader reader) throws IOException {
     Set<Integer> unknownTypeIndices = new HashSet<>();
     for (int i = 0; i < fieldNum; i++) {
       unknownTypeIndices.add(i);
@@ -82,7 +83,7 @@ public class CSVReader extends BasicReader {
 
     String line;
     List<Integer> indexToRemove = new ArrayList<>();
-    while ((line = reader.readLine()) != null
+    while ((line = this.reader.readLine()) != null
         && !unknownTypeIndices.isEmpty()
         && cachedLines != null && cachedLines.size() < config.BATCH_SIZE) {
       String[] lineSplit = line.split(separator);
@@ -130,7 +131,7 @@ public class CSVReader extends BasicReader {
 
     // infer datatype using at most a batch of lines
     if (overallSchema == null) {
-      inferTypeWithData(fieldNum, schema);
+      inferTypeWithData(fieldNum, schema, reader);
     } else {
       inferTypeWithOverallSchema(schema);
     }
@@ -217,7 +218,7 @@ public class CSVReader extends BasicReader {
     }
 
     for (int i = 1; i < split.length; i++) {
-      int overallIndex = overallSchema.getIndex(currentFileSchema.getFields()[i]);
+      int overallIndex = overallSchema.getIndex(currentFileSchema.getFields()[i - 1]);
       split[i] = removeQuote(split[i]);
 
       fields.set(overallIndex, parseField(split[i], overallSchema, overallIndex));
@@ -248,6 +249,7 @@ public class CSVReader extends BasicReader {
     Schema fileSchema;
     try {
       fileSchema = convertHeaderToSchema(reader.readLine(), reader);
+      logger.info("Current file schema: {}", fileSchema);
     } catch (IOException e) {
       logger.warn("Cannot read schema from {}, skipping", currentFile);
       return;

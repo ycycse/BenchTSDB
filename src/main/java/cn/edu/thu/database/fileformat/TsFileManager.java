@@ -284,7 +284,7 @@ public class TsFileManager implements IDataBaseManager {
   public long count(String tagValue, String field, long startTime, long endTime) {
 
     long start = System.nanoTime();
-    try (TsFileReader readTsFile = new TsFileReader(new TsFileSequenceReader(tagToFilePath(tagValue)));) {
+    try (TsFileReader readTsFile = new TsFileReader(new TsFileSequenceReader(tagToFilePath(tagValue)))) {
 
       ArrayList<Path> paths = new ArrayList<>();
       paths.add(new Path(tagValue, field));
