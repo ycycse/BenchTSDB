@@ -28,6 +28,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,22 +45,28 @@ public class CSVReader extends BasicReader {
 
   private static final Logger logger = LoggerFactory.getLogger(CSVReader.class);
 
-  private final String separator = ",";
   private final int defaultPrecision = 8;
   private IndexedSchema overallSchema;
   private Schema currentFileSchema;
+  private boolean useDateFormat = true;
+  private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
 
   public CSVReader(Config config, List<String> files) {
     super(config, files);
     if (!config.splitFileByDevice) {
+      logger.info("Collecting the overall schema");
       overallSchema = collectSchemaFromFiles(files);
-      logger.info("The overall schema is: {}", overallSchema);
+      logger.info("The overall schema is collected");
+      logger.debug("The overall schema is: {}", overallSchema);
     }
   }
 
   private IndexedSchema collectSchemaFromFiles(List<String> files) {
     SchemaSet schemaSet = new SchemaSet();
-    for (String file : files) {
+    logger.info("Collecting schema from {} files", files.size());
+    for (int i = 0; i < files.size(); i++) {
+      String file = files.get(i);
+      logger.info("Collecting schema from {} ({}/{})", file, (i+1), files.size());
       schemaSet.union(collectSchemaFromFile(file));
     }
     return schemaSet.toSchema();
@@ -85,10 +94,11 @@ public class CSVReader extends BasicReader {
 
     String line;
     List<Integer> indexToRemove = new ArrayList<>();
+    int numRead = 0;
     while ((line = reader.readLine()) != null
         && !unknownTypeIndices.isEmpty()
-        && (!fillCache || cachedLines.size() < config.BATCH_SIZE)) {
-      String[] lineSplit = line.split(separator);
+        && ++numRead <= config.INFER_TYPE_MAX_RECORD_NUM) {
+      String[] lineSplit = line.split(config.CSV_SEPARATOR);
       indexToRemove.clear();
 
       for (Integer unknownTypeIndex : unknownTypeIndices) {
@@ -115,7 +125,7 @@ public class CSVReader extends BasicReader {
   private Schema convertHeaderToSchema(String headerLine, BufferedReader reader, String fileName,
       boolean fillCache)
       throws IOException {
-    String[] split = headerLine.split(separator);
+    String[] split = headerLine.split(config.CSV_SEPARATOR);
     Schema schema = new Schema();
 
     // the first field is fixed to time
@@ -241,11 +251,23 @@ public class CSVReader extends BasicReader {
     return fields;
   }
 
+  private long parseTime(String timeStr) {
+    if (useDateFormat) {
+      try {
+        return dateFormat.parse(timeStr).getTime();
+      } catch (ParseException e) {
+        useDateFormat = false;
+        return Long.parseLong(timeStr);
+      }
+    } else {
+      return Long.parseLong(timeStr);
+    }
+  }
 
   private Record convertToRecord(String line) {
     Record record;
-    String[] split = line.split(separator);
-    long time = Long.parseLong(split[0]);
+    String[] split = line.split(config.CSV_SEPARATOR);
+    long time = parseTime(split[0]);
     String tag = currentFileSchema.getTag();
     List<Object> fields;
 
@@ -264,7 +286,8 @@ public class CSVReader extends BasicReader {
     Schema fileSchema;
     try {
       fileSchema = convertHeaderToSchema(reader.readLine(), reader, currentFile, true);
-      logger.info("Current file schema: {}", fileSchema);
+      logger.info("File {} schema collected", currentFile);
+      logger.debug("Current file schema: {}", fileSchema);
     } catch (IOException e) {
       logger.warn("Cannot read schema from {}, skipping", currentFile);
       return;

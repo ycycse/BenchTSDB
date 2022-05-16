@@ -111,7 +111,8 @@ public class TsFileManager implements IDataBaseManager {
       }
       tagSchemasMap.put(tag, schemas);
       writer.registerSchemaTemplate(schema.getTag(), template, config.useAlignedSeries);
-      logger.info("Created a writer with {}, schema {}", tag, schema);
+      logger.info("Created a writer of {}", schema);
+      logger.debug("Writer schema {}", schema);
     } catch (Exception e) {
       logger.error("Cannot create writer with {}, schema {}", tag, schema);
     }

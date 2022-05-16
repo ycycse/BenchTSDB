@@ -39,6 +39,9 @@ public class Config {
 
   public int THREAD_NUM = 1;
   public int BATCH_SIZE = 500;
+  public int INFER_TYPE_MAX_RECORD_NUM = 10;
+
+  public String CSV_SEPARATOR = ",";
 
   public String INFLUXDB_URL = "http://127.0.0.1:8086";
 
@@ -121,6 +124,8 @@ public class Config {
     HDFS_IP = properties.getOrDefault("HDFS_IP", HDFS_IP).toString();
     SUMMARYSTORE_PATH = properties.getOrDefault("SUMMARYSTORE_PATH", SUMMARYSTORE_PATH).toString();
     FILE_PATH = properties.getOrDefault("FILE_PATH", FILE_PATH).toString();
+
+    CSV_SEPARATOR = properties.getOrDefault("csv_separator", CSV_SEPARATOR).toString();
 
     splitFileByDevice = Boolean.parseBoolean(
         properties.getOrDefault("split_file_by_device", syntheticNullRatio).toString());
