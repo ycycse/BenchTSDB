@@ -151,7 +151,7 @@ public class ORCManager implements IDataBaseManager {
     long start = System.nanoTime();
 
     String tag = records.get(0).tag;
-    if(closeOnTagChanged && !Objects.equals(tag, lastTag)) {
+    if(closeOnTagChanged && config.splitFileByDevice  && !Objects.equals(tag, lastTag)) {
       close();
     }
 

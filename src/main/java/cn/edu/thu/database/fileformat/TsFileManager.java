@@ -152,7 +152,7 @@ public class TsFileManager implements IDataBaseManager {
   public long insertBatch(List<Record> records, Schema schema) {
     long start = System.nanoTime();
     String tag = records.get(0).tag;
-    if (closeOnTagChanged && !Objects.equals(tag, lastTag)) {
+    if (closeOnTagChanged && config.splitFileByDevice && !Objects.equals(tag, lastTag)) {
       close();
     }
 

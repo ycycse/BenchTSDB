@@ -140,7 +140,7 @@ public class ParquetManager implements IDataBaseManager {
     if (!config.splitFileByDevice) {
       return writerMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(t, schema));
     } else {
-      return writerMap.computeIfAbsent(tag, t -> createWriter(tag, schema));
+      return writerMap.computeIfAbsent(tag, t -> createWriter(t, schema));
     }
   }
 
@@ -149,7 +149,7 @@ public class ParquetManager implements IDataBaseManager {
   public long insertBatch(List<Record> records, Schema schema) {
     long start = System.nanoTime();
     String tag = records.get(0).tag;
-    if (closeOnTagChanged && !Objects.equals(tag, lastTag)) {
+    if (closeOnTagChanged && config.splitFileByDevice && !Objects.equals(tag, lastTag)) {
       close();
     }
 
