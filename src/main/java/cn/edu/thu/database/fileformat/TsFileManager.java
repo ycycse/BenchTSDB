@@ -194,7 +194,7 @@ public class TsFileManager implements IDataBaseManager {
   private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
       Schema schema) {
     String tag = records.get(0).tag;
-    List<MeasurementSchema> schemas = tagSchemasMap.get(tag);
+    List<MeasurementSchema> schemas = tagToMeasurementSchemas(tag);
     NonAlignedTablet tablet = new NonAlignedTablet(tag, schemas,
         records.size());
     for (Record record: records) {
@@ -213,10 +213,13 @@ public class TsFileManager implements IDataBaseManager {
     return tablet;
   }
 
+  private List<MeasurementSchema> tagToMeasurementSchemas(String tag) {
+    return tagSchemasMap.get(config.splitFileByDevice ? tag : Config.DEFAULT_TAG);
+  }
 
   private Tablet convertToTablet(List<Record> records, Schema schema) {
     String tag = records.get(0).tag;
-    Tablet tablet = new Tablet(tag, tagSchemasMap.get(tag), records.size());
+    Tablet tablet = new Tablet(tag, tagToMeasurementSchemas(tag), records.size());
 
     long[] timestamps = tablet.timestamps;
     Object[] values = tablet.values;
