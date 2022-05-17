@@ -144,6 +144,9 @@ public class Config {
         Integer
             .parseInt(properties.getOrDefault("synthetic_point_num", syntheticPointNum).toString());
 
+    INFER_TYPE_MAX_RECORD_NUM = Integer
+        .parseInt(properties.getOrDefault("INFER_TYPE_MAX_RECORD_NUM", INFER_TYPE_MAX_RECORD_NUM).toString());
+
     useAlignedTablet = Boolean.parseBoolean(properties.getOrDefault("use_aligned_tablet",
         useAlignedTablet).toString());
     useAlignedSeries = Boolean.parseBoolean(properties.getOrDefault("use_aligned_series",
