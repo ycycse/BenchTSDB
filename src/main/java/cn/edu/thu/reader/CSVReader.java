@@ -50,14 +50,17 @@ public class CSVReader extends BasicReader {
   private Schema currentFileSchema;
   private boolean useDateFormat = true;
   private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+  private Map<String, Class<?>> typeMap;
 
-  public CSVReader(Config config, List<String> files) {
+  public CSVReader(Config config, List<String> files) throws IOException {
     super(config, files);
-    if (!config.splitFileByDevice) {
-      logger.info("Collecting the overall schema");
-      overallSchema = collectSchemaFromFiles(files);
-      logger.info("The overall schema is collected");
-      logger.debug("The overall schema is: {}", overallSchema);
+    if (!config.TYPE_INFO_EXIST) {
+      if (!config.splitFileByDevice) {
+        logger.info("Collecting the overall schema");
+        overallSchema = collectSchemaFromFiles(files);
+        logger.info("The overall schema is collected");
+        logger.debug("The overall schema is: {}", overallSchema);
+      }
     }
   }
 
@@ -66,7 +69,7 @@ public class CSVReader extends BasicReader {
     logger.info("Collecting schema from {} files", files.size());
     for (int i = 0; i < files.size(); i++) {
       String file = files.get(i);
-      logger.info("Collecting schema from {} ({}/{})", file, (i+1), files.size());
+      logger.info("Collecting schema from {} ({}/{})", file, (i + 1), files.size());
       schemaSet.union(collectSchemaFromFile(file));
     }
     return schemaSet.toSchema();
@@ -125,6 +128,79 @@ public class CSVReader extends BasicReader {
       schema.getTypes()[unknownTypeIndex] = String.class;
     }
   }
+
+  private Schema convertHeaderToSchemaWithTypeInfo(String headerLine, String fileName)
+      throws IOException {
+    String[] split = headerLine.split(config.CSV_SEPARATOR);
+    Schema schema = new Schema();
+
+    // the first field is fixed to time
+    int fieldNum = split.length - 1;
+    schema.setFields(new String[fieldNum]);
+    schema.setPrecision(new int[fieldNum]);
+
+    int devicePos = split[1].lastIndexOf('.');
+    String tag;
+    if (devicePos == -1) {
+      tag = fileNameToTag(new File(fileName).getName());
+    } else {
+      tag = split[1].substring(0, devicePos);
+    }
+
+    schema.setTag(tag);
+    for (int i = 1; i < split.length; i++) {
+      String columnName = split[i];
+      String measurement = devicePos != -1 ? columnName.substring(devicePos + 1) : columnName;
+      schema.getFields()[i - 1] = measurement;
+      schema.getPrecision()[i - 1] = defaultPrecision;
+      // get type info
+      if (typeMap == null) {
+        extractTypeMap();
+      }
+      if (!typeMap.containsKey(columnName)) {
+        throw new IOException(
+            "something went wrong: TYPE_INFO_EXIST=true while typeMap does not contain series "
+                + columnName);
+      }
+      schema.getTypes()[i - 1] = typeMap.get(columnName);
+    }
+    return schema;
+  }
+
+  private void extractTypeMap() throws IOException {
+    typeMap = new HashMap<>();
+    try (
+        BufferedReader reader = new BufferedReader(new FileReader(config.TYPE_INFO_FILE))) {
+      if (config.TYPE_INFO_HEADER) {
+        reader.readLine();
+      }
+      String line;
+      while ((line = reader.readLine()) != null) {
+        String[] items = line.split(config.CSV_SEPARATOR);
+        String seriesName = items[config.TYPE_INFO_SERIES_COL];
+        String seriesType = items[config.TYPE_INFO_TYPE_COL];
+        Class<?> type = String.class;
+        switch (seriesType) {
+          case "FLOAT":
+          case "DOUBLE":
+            type = Double.class;
+            break;
+          case "BOOLEAN":
+          case "TEXT":
+            type = String.class;
+            break;
+          case "INT32":
+          case "INT64":
+            type = Long.class;
+            break;
+          default:
+            break;
+        }
+        typeMap.put(seriesName, type);
+      }
+    }
+  }
+
 
   private Schema convertHeaderToSchema(String headerLine, BufferedReader reader, String fileName,
       boolean fillCache)
@@ -275,7 +351,7 @@ public class CSVReader extends BasicReader {
     String tag = currentFileSchema.getTag();
     List<Object> fields;
 
-    if (config.splitFileByDevice) {
+    if (config.TYPE_INFO_EXIST || config.splitFileByDevice) {
       fields = fieldsWithCurrentFileSchema(split);
     } else {
       fields = fieldsWithOverallSchema(split);
@@ -287,10 +363,15 @@ public class CSVReader extends BasicReader {
 
   @Override
   public void onFileOpened() {
-    Schema fileSchema;
+    Schema fileSchema = null;
     try {
-      fileSchema = convertHeaderToSchema(reader.readLine(), reader, currentFile, true);
-      logger.info("File {} schema collected", currentFile);
+      if (!config.TYPE_INFO_EXIST) {
+        fileSchema = convertHeaderToSchema(reader.readLine(), reader, currentFile, true);
+        logger.info("File {} schema collected automatically", currentFile);
+      } else {
+        fileSchema = convertHeaderToSchemaWithTypeInfo(reader.readLine(), currentFile);
+        logger.info("File {} schema collected with existent type information", currentFile);
+      }
       logger.debug("Current file schema: {}", fileSchema);
     } catch (IOException e) {
       logger.warn("Cannot read schema from {}, skipping", currentFile);
@@ -301,7 +382,11 @@ public class CSVReader extends BasicReader {
 
   @Override
   public Schema getCurrentSchema() {
-    return config.splitFileByDevice ? currentFileSchema : overallSchema;
+    if (config.TYPE_INFO_EXIST) {
+      return currentFileSchema;
+    } else {
+      return config.splitFileByDevice ? currentFileSchema : overallSchema;
+    }
   }
 
   private static class SchemaSet {
@@ -332,7 +417,7 @@ public class CSVReader extends BasicReader {
       if (t1 == null) {
         return t2;
       }
-      if (t2 ==null) {
+      if (t2 == null) {
         return t1;
       }
 

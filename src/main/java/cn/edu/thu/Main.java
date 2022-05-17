@@ -21,7 +21,7 @@ import java.util.Arrays;
 
 public class Main {
 
-  public static void main(String[] args) throws InterruptedException {
+  public static void main(String[] args) throws Exception {
     String mode = args[0];
     String[] remainingArgs = Arrays.copyOfRange(args, 1, args.length);
     switch (mode) {

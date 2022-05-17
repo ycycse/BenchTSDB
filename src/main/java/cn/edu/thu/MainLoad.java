@@ -1,27 +1,28 @@
 package cn.edu.thu;
 
 import cn.edu.thu.common.BenchmarkExceptionHandler;
-import cn.edu.thu.writer.RealDatasetWriter;
 import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Statistics;
-import cn.edu.thu.database.*;
+import cn.edu.thu.database.DatabaseFactory;
+import cn.edu.thu.database.IDataBaseManager;
+import cn.edu.thu.writer.RealDatasetWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.FileInputStream;
-import java.util.concurrent.*;
 
 
 public class MainLoad {
 
   private static Logger logger = LoggerFactory.getLogger(MainLoad.class);
 
-  public static void main(String[] args) throws InterruptedException {
-
+  public static void main(String[] args) throws Exception {
+    long start = System.nanoTime();
     if (args == null || args.length == 0) {
       args = new String[]{"conf/config.properties"};
     }
@@ -87,7 +88,8 @@ public class MainLoad {
     Thread.UncaughtExceptionHandler handler = new BenchmarkExceptionHandler();
     ExecutorService executorService = Executors.newFixedThreadPool(config.THREAD_NUM);
     for (int threadId = 0; threadId < config.THREAD_NUM; threadId++) {
-      Thread thread = new Thread(new RealDatasetWriter(config, thread_files.get(threadId), statistics));
+      Thread thread = new Thread(
+          new RealDatasetWriter(config, thread_files.get(threadId), statistics));
       thread.setUncaughtExceptionHandler(handler);
       executorService.submit(thread);
     }
@@ -106,8 +108,9 @@ public class MainLoad {
 
     logger.info("All done! Total records:{}, points:{}, time:{} ms, speed:{}",
         statistics.recordNum,
-        statistics.pointNum, (float)statistics.timeCost.get() / 1000_000F, statistics.speed());
+        statistics.pointNum, (float) statistics.timeCost.get() / 1000_000F, statistics.speed());
 
+    logger.info("total program running time: {} ms", (System.nanoTime() - start) / 1000_000F);
   }
 
   private static void getAllFiles(String strPath, List<String> files) {

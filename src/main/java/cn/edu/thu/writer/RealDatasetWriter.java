@@ -1,9 +1,11 @@
 package cn.edu.thu.writer;
 
-import cn.edu.thu.common.Record;
+import backup.MLabUtilizationReader;
 import cn.edu.thu.common.Config;
+import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Statistics;
-import cn.edu.thu.database.*;
+import cn.edu.thu.database.DatabaseFactory;
+import cn.edu.thu.database.IDataBaseManager;
 import cn.edu.thu.reader.BasicReader;
 import cn.edu.thu.reader.CSVReader;
 import cn.edu.thu.reader.GeolifeReader;
@@ -11,10 +13,10 @@ import cn.edu.thu.reader.NOAAReader;
 import cn.edu.thu.reader.ReddReader;
 import cn.edu.thu.reader.SyntheticReader;
 import cn.edu.thu.reader.TDriveReader;
+import java.io.IOException;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.*;
-import backup.MLabUtilizationReader;
 
 public class RealDatasetWriter implements Runnable {
 
@@ -24,7 +26,8 @@ public class RealDatasetWriter implements Runnable {
   private BasicReader reader;
   private final Statistics statistics;
 
-  public RealDatasetWriter(Config config, List<String> files, final Statistics statistics) {
+  public RealDatasetWriter(Config config, List<String> files, final Statistics statistics)
+      throws IOException {
     this.database = DatabaseFactory.getDbManager(config);
     database.initClient();
     this.config = config;
@@ -65,7 +68,7 @@ public class RealDatasetWriter implements Runnable {
 
     try {
 
-      while(reader.hasNext()) {
+      while (reader.hasNext()) {
         List<Record> batch = reader.next();
         statistics.timeCost.addAndGet(database.insertBatch(batch, reader.getCurrentSchema()));
         statistics.recordNum.addAndGet(batch.size());
