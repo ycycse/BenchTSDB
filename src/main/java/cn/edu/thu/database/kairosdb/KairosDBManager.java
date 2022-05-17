@@ -57,7 +57,7 @@ public class KairosDBManager implements IDataBaseManager {
 
     // convert to kairosdb data points
     for (Record record : records) {
-      points.addAll(convertToPoints(record));
+      points.addAll(convertToPoints(record,schema));
     }
     String body = JSON.toJSONString(points);
 
@@ -75,21 +75,20 @@ public class KairosDBManager implements IDataBaseManager {
     return System.nanoTime() - start;
   }
 
-  private List<KairosDBPoint> convertToPoints(Record record) {
-//    List<KairosDBPoint> points = new ArrayList<>();
-//
-//    Map<String, String> tags = new HashMap<>();
-//    tags.put(Config.TAG_NAME, record.tag);
-//    for (int i = 0; i < config.FIELDS.length; i++) {
-//      KairosDBPoint point = new KairosDBPoint();
-//      point.setName(config.FIELDS[i]);
-//      point.setTimestamp(record.timestamp);
-//      point.setValue(record.fields.get(i));
-//      point.setTags(tags);
-//      points.add(point);
-//    }
-//    return points;
-    return null;
+  private List<KairosDBPoint> convertToPoints(Record record,Schema schema) {
+    List<KairosDBPoint> points = new ArrayList<>();
+
+    Map<String, String> tags = new HashMap<>();
+    tags.put(Config.TAG_NAME, record.tag);
+    for (int i = 0; i < schema.getFields().length; i++) {
+      KairosDBPoint point = new KairosDBPoint();
+      point.setName(schema.getFields()[i]);
+      point.setTimestamp(record.timestamp);
+      point.setValue(record.fields.get(i));
+      point.setTags(tags);
+      points.add(point);
+    }
+    return points;
   }
 
 

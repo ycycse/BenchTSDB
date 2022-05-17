@@ -4,6 +4,8 @@ import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
+import cn.edu.thu.database.fileformat.TsFileManager;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +19,7 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.utils.BitMap;
+import org.apache.iotdb.tsfile.write.record.NonAlignedTablet;
 import org.apache.iotdb.tsfile.write.record.Tablet;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.slf4j.Logger;
@@ -71,17 +74,40 @@ public class IoTDBManager implements IDataBaseManager {
 
   @Override
   public long insertBatch(List<Record> records, Schema schema) { // use insertTablet interface
-    Tablet tablet = genTablet(records, schema); // TODO: note here time is not included
+//    Tablet tablet = genTablet(records, schema); // Note this part of time is not included
     long start = System.nanoTime();
     try {
-      session.insertTablet(tablet);
-    } catch (IoTDBConnectionException | StatementExecutionException e) {
+      if (config.useAlignedTablet) {
+        insertBatchAligned(records, session, schema);
+      } else {
+        insertBatchNonAligned(records, session, schema);
+      }
+    } catch (IOException e) {
       logger.error(e.getMessage());
     }
     return System.nanoTime() - start;
   }
 
-  public static Tablet genTablet(List<Record> records, Schema schema) {
+  private void insertBatchAligned(List<Record> records, Session session, Schema schema) {
+    Tablet tablet = convertToTablet(records, schema);
+    try {
+//      if (config.useAlignedSeries) { //TODO: whether to use this?
+//        writer.writeAligned(tablet);
+//      } else {
+//      session.insertAlignedTablet(tablet);
+      /** TODO
+       * -   **session.insertTablet(tablet) + mark denotes null: right**
+       * -   **session.insertAlignedTablet(tablet) + mark denotes null: lose data**
+       * -   **session.insertAlignedTablet(tablet) + mark denotes existent: total wrong**
+       */
+      session.insertTablet(tablet);
+//      }
+    } catch (Exception e) {
+      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
+    }
+  }
+
+  private Tablet convertToTablet(List<Record> records, Schema schema) {
     List<MeasurementSchema> schemaList = new ArrayList<>();
     for (int i = 0; i < schema.getFields().length; i++) {
       Map<String, String> props = new HashMap<>();
@@ -93,37 +119,27 @@ public class IoTDBManager implements IDataBaseManager {
     }
 
     Tablet tablet = new Tablet(schema.getTag(), schemaList, records.size());
+
+    long[] timestamps = tablet.timestamps;
+    Object[] values = tablet.values;
+    tablet.bitMaps = new BitMap[values.length];
+    for (int i = 0; i < tablet.bitMaps.length; i++) {
+      tablet.bitMaps[i] = new BitMap(records.size());
+    }
+
     for (Record record : records) {
-      int rowIndex = tablet.rowSize++;
-      tablet.addTimestamp(rowIndex, record.timestamp);
+      int row = tablet.rowSize++;
+      timestamps[row] = record.timestamp;
       for (int i = 0; i < schema.getFields().length; i++) {
-        Object value = record.fields.get(i);
-        if (value != null && schema.getTypes()[i] == String.class) {
-          value = new Binary((String) value);
-        }
-        tablet.addValue(schemaList.get(i).getMeasurementId(), rowIndex,
-            value); // this function will handle bitmap mark null automatically
+        addToColumn(tablet.values[i], row, record.fields.get(i), tablet.bitMaps[i],
+            schema.getTypes()[i]);
       }
     }
 
-//    long[] timestamps = tablet.timestamps;
-//    Object[] values = tablet.values;
-//    tablet.bitMaps = new BitMap[values.length];
-//    for (int i = 0; i < tablet.bitMaps.length; i++) {
-//      tablet.bitMaps[i] = new BitMap(records.size());
-//    }
-//    for (Record record : records) {
-//      int row = tablet.rowSize++;
-//      timestamps[row] = record.timestamp;
-//      for (int i = 0; i < schema.getFields().length; i++) {
-//        addToColumn(tablet.values[i], row, record.fields.get(i), tablet.bitMaps[i],
-//            schema.getTypes()[i]);
-//      }
-//    }
     return tablet;
   }
 
-  private static void addToColumn(Object column, int rowIndex, Object field, BitMap bitMap,
+  private void addToColumn(Object column, int rowIndex, Object field, BitMap bitMap,
       Class<?> type) {
     if (type == Long.class) {
       addToLongColumn(column, rowIndex, field, bitMap);
@@ -134,7 +150,7 @@ public class IoTDBManager implements IDataBaseManager {
     }
   }
 
-  private static void addToDoubleColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
+  private void addToDoubleColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
     double[] sensor = (double[]) column;
     sensor[rowIndex] = field != null ? (double) field : Double.MIN_VALUE;
     if (field == null) {
@@ -142,7 +158,7 @@ public class IoTDBManager implements IDataBaseManager {
     }
   }
 
-  private static void addToLongColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
+  private void addToLongColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
     long[] sensor = (long[]) column;
     sensor[rowIndex] = field != null ? (long) field : Long.MIN_VALUE;
     if (field == null) {
@@ -150,13 +166,65 @@ public class IoTDBManager implements IDataBaseManager {
     }
   }
 
-  private static void addToTextColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
+  private void addToTextColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
     Binary[] sensor = (Binary[]) column;
     sensor[rowIndex] = field != null ? new Binary((String) field) : Binary.EMPTY_VALUE;
     if (field == null) {
       bitMap.mark(rowIndex);
     }
   }
+
+
+  private void insertBatchNonAligned(List<Record> records, Session session, Schema schema)
+      throws IOException {
+    throw new IOException("not implemented");
+//    NonAlignedTablet tablet = convertToNonAlignedTablet(records, schema);
+//    try {
+//      session.insertTablet(tablet);
+//    } catch (Exception e) {
+//      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
+//    }
+  }
+
+  private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
+      Schema schema) {
+    return null;
+  }
+
+//  private static void addToColumn(Object column, int rowIndex, Object field, BitMap bitMap,
+//      Class<?> type) {
+//    if (type == Long.class) {
+//      addToLongColumn(column, rowIndex, field, bitMap);
+//    } else if (type == Double.class) {
+//      addToDoubleColumn(column, rowIndex, field, bitMap);
+//    } else {
+//      addToTextColumn(column, rowIndex, field, bitMap);
+//    }
+//  }
+//
+//  private static void addToDoubleColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
+//    double[] sensor = (double[]) column;
+//    sensor[rowIndex] = field != null ? (double) field : Double.MIN_VALUE;
+//    if (field == null) {
+//      bitMap.mark(rowIndex);
+//    }
+//  }
+//
+//  private static void addToLongColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
+//    long[] sensor = (long[]) column;
+//    sensor[rowIndex] = field != null ? (long) field : Long.MIN_VALUE;
+//    if (field == null) {
+//      bitMap.mark(rowIndex);
+//    }
+//  }
+//
+//  private static void addToTextColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
+//    Binary[] sensor = (Binary[]) column;
+//    sensor[rowIndex] = field != null ? new Binary((String) field) : Binary.EMPTY_VALUE;
+//    if (field == null) {
+//      bitMap.mark(rowIndex);
+//    }
+//  }
 
   private static TSDataType toTsDataType(Class<?> type) {
     if (type == Long.class) {
