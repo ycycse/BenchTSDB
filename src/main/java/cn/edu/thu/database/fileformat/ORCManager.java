@@ -67,7 +67,7 @@ public class ORCManager implements IDataBaseManager {
   }
 
   private Writer createWriter(String tag, Schema schema) {
-    TypeDescription orcSchema = TypeDescription.fromString(genWriteSchema(schema));
+    TypeDescription orcSchema = genWriteSchema(schema);
 
     String fullFilePath = tagToFilePath(tag);
     new File(fullFilePath).delete();
@@ -206,19 +206,27 @@ public class ORCManager implements IDataBaseManager {
     }
   }
 
-  private String genWriteSchema(Schema schema) {
-    String s;
-    if (config.splitFileByDevice) {
-      s = "struct<timestamp:bigint";
-    } else {
-      s = "struct<timestamp:bigint,deviceId:string";
+  private TypeDescription genWriteSchema(Schema schema) {
+    TypeDescription description = TypeDescription.createStruct()
+        .addField("timestamp", TypeDescription.createLong());
+    if (!config.splitFileByDevice) {
+      description.addField("deviceId", TypeDescription.createString());
     }
 
     for (int i = 0; i < schema.getFields().length; i++) {
-      s += ("," + schema.getFields()[i] + ":" + dataTypeString(schema.getTypes()[i]));
+      description.addField(schema.getFields()[i], toORCDataType(schema.getTypes()[i]));
     }
-    s += ">";
-    return s;
+    return description;
+  }
+
+  private TypeDescription toORCDataType(Class<?> type) {
+    if (type == Long.class) {
+      return TypeDescription.createLong();
+    }
+    if (type == Double.class) {
+      return TypeDescription.createDouble();
+    }
+    return TypeDescription.createString();
   }
 
   private String dataTypeString(Class<?> type) {
