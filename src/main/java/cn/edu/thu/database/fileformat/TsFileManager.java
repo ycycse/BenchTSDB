@@ -142,9 +142,9 @@ public class TsFileManager implements IDataBaseManager {
 
   private TsFileWriter getWriter(String tag, Schema schema) {
     if (!config.splitFileByDevice) {
-      return tagWriterMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(tag, schema));
+      return tagWriterMap.computeIfAbsent(Config.DEFAULT_TAG, t -> createWriter(t, schema));
     } else {
-      return tagWriterMap.computeIfAbsent(tag, t -> createWriter(tag, schema));
+      return tagWriterMap.computeIfAbsent(tag, t -> createWriter(t, schema));
     }
   }
 
