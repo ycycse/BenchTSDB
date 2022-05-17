@@ -102,6 +102,10 @@ public class CSVReader extends BasicReader {
       indexToRemove.clear();
 
       for (Integer unknownTypeIndex : unknownTypeIndices) {
+        if (unknownTypeIndex + 1 >= lineSplit.length) {
+          continue;
+        }
+
         String field = removeQuote(lineSplit[unknownTypeIndex + 1]);
         Class<?> aClass = inferType(field);
         if (aClass != null) {
