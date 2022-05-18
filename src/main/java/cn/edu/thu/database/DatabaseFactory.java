@@ -20,7 +20,7 @@ public class DatabaseFactory {
         return new IoTDBManager(config);
       case "INFLUXDB": // 1.8.10
         return new InfluxDBManager(config);
-      case "KAIROSDB": // 1.3.0 with
+      case "KAIROSDB": // 1.3.0 on Cassandra 3.11.13
         return new KairosDBManager(config);
 //      case "OPENTSDB":
 //        return new OpenTSDBManager(config);

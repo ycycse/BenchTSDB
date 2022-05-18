@@ -62,9 +62,9 @@ public class Config {
   public String OPENTSDB_URL = "http://127.0.0.1:4242";
 //    public String OPENTSDB_URL = "http://192.168.10.64:4242";
 
-  //    public String KAIROSDB_URL = "http://127.0.0.1:1408";
-//    public String KAIROSDB_URL = "http://192.168.10.64:1408";
-  public String KAIROSDB_URL = "http://192.168.10.66:8080";
+  public String KAIROSDB_URL = "http://127.0.0.1:8080";
+  public String CASSANDRA_IP = "127.0.0.1";
+  public int CASSANDRA_PORT = 9042;
 
   public String SUMMARYSTORE_PATH = "sstore";
 
@@ -155,8 +155,12 @@ public class Config {
     INFLUXDB_URL = properties.getOrDefault("INFLUXDB_URL", INFLUXDB_URL).toString();
     INFLUXDB_DATABASE = properties.getOrDefault("INFLUXDB_DATABASE", INFLUXDB_DATABASE).toString();
 
-    OPENTSDB_URL = properties.getOrDefault("OPENTSDB_URL", OPENTSDB_URL).toString();
     KAIROSDB_URL = properties.getOrDefault("KAIROSDB_URL", KAIROSDB_URL).toString();
+    CASSANDRA_IP = properties.getOrDefault("CASSANDRA_IP", CASSANDRA_IP).toString();
+    CASSANDRA_PORT = Integer
+        .parseInt(properties.getOrDefault("CASSANDRA_PORT", CASSANDRA_PORT).toString());
+
+    OPENTSDB_URL = properties.getOrDefault("OPENTSDB_URL", OPENTSDB_URL).toString();
     WATERWHEEL_IP = properties.getOrDefault("WATERWHEEL_IP", WATERWHEEL_IP).toString();
     HDFS_IP = properties.getOrDefault("HDFS_IP", HDFS_IP).toString();
     SUMMARYSTORE_PATH = properties.getOrDefault("SUMMARYSTORE_PATH", SUMMARYSTORE_PATH).toString();

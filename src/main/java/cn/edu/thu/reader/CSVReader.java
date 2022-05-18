@@ -374,7 +374,7 @@ public class CSVReader extends BasicReader {
       }
       logger.debug("Current file schema: {}", fileSchema);
     } catch (IOException e) {
-      logger.warn("Cannot read schema from {}, skipping", currentFile);
+      logger.error("Cannot read schema from {}, skipping. {}", currentFile, e);
       return;
     }
     currentFileSchema = fileSchema;

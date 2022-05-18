@@ -44,6 +44,8 @@ public class KairosDBManager implements IDataBaseManager {
 //        e.printStackTrace();
 //      }
 //    }
+    logger.info(
+        "NOTE: I don't clear existent data for KairosDB. Please you assure KairosDB is started up with brand new settings.");
   }
 
   @Override
