@@ -57,7 +57,18 @@ public class KairosDBManager implements IDataBaseManager {
 
     // convert to kairosdb data points
     for (Record record : records) {
-      points.addAll(convertToPoints(record,schema));
+      points.addAll(convertToPoints(record, schema));
+      // TODO: BUT this way of constructing points row by row is not the best of KairosDB?
+      // TODO: can we make all points of a sensor in a batch? like the example below:?
+      // {
+      //      "name": "archive_file_tracked",
+      //      "datapoints": [[1359788400000, 123], [1359788300000, 13.2], [1359788410000, 23.1]],
+      //      "tags": {
+      //          "host": "server1",
+      //          "data_center": "DC1"
+      //      },
+      //      "ttl": 300
+      //  },
     }
     String body = JSON.toJSONString(points);
 
@@ -75,12 +86,16 @@ public class KairosDBManager implements IDataBaseManager {
     return System.nanoTime() - start;
   }
 
-  private List<KairosDBPoint> convertToPoints(Record record,Schema schema) {
+  private List<KairosDBPoint> convertToPoints(Record record, Schema schema) {
     List<KairosDBPoint> points = new ArrayList<>();
 
     Map<String, String> tags = new HashMap<>();
     tags.put(Config.TAG_NAME, record.tag);
     for (int i = 0; i < schema.getFields().length; i++) {
+      Object value = record.fields.get(i);
+      if (value == null) {
+        continue;
+      }
       KairosDBPoint point = new KairosDBPoint();
       point.setName(schema.getFields()[i]);
       point.setTimestamp(record.timestamp);
@@ -93,52 +108,15 @@ public class KairosDBManager implements IDataBaseManager {
 
 
   /**
-   * {
-   *    "start_absolute": 1357023600000,
-   *    "end_relative": {
-   *        "value": "5",
-   *        "unit": "days"
-   *    },
-   *    "time_zone": "Asia/Kabul",
-   *    "metrics": [
-   *        {
-   *            "tags": {
-   *                "host": ["foo", "foo2"],
-   *                "customer": ["bar"]
-   *            },
-   *            "name": "abc.123",
-   *            "limit": 10000,
-   *            "aggregators": [
-   *                {
-   *                    "name": "sum",
-   *                    "sampling": {
-   *                        "value": 10,
-   *                        "unit": "minutes"
-   *                    }
-   *                }
-   *            ]
-   *        },
-   *        {
-   *            "tags": {
-   *                "host": ["foo", "foo2"],
-   *                "customer": ["bar"]
-   *            },
-   *            "name": "xyz.123",
-   *            "aggregators": [
-   *                {
-   *                    "name": "avg",
-   *                    "sampling": {
-   *                        "value": 10,
-   *                        "unit": "minutes"
-   *                    }
-   *                }
-   *            ]
-   *        }
-   *    ]
-   * }
-   *
+   * { "start_absolute": 1357023600000, "end_relative": { "value": "5", "unit": "days" },
+   * "time_zone": "Asia/Kabul", "metrics": [ { "tags": { "host": ["foo", "foo2"], "customer":
+   * ["bar"] }, "name": "abc.123", "limit": 10000, "aggregators": [ { "name": "sum", "sampling": {
+   * "value": 10, "unit": "minutes" } } ] }, { "tags": { "host": ["foo", "foo2"], "customer":
+   * ["bar"] }, "name": "xyz.123", "aggregators": [ { "name": "avg", "sampling": { "value": 10,
+   * "unit": "minutes" } } ] } ] }
    */
-  @Override public long count(String tagValue, String field, long startTime, long endTime) {
+  @Override
+  public long count(String tagValue, String field, long startTime, long endTime) {
 
     Map<String, Object> queryMap = new HashMap<>();
 
@@ -164,11 +142,12 @@ public class KairosDBManager implements IDataBaseManager {
     List<Map<String, Object>> aggregators = new ArrayList<>();
 
     Map<String, Object> aggregator = new HashMap<>();
-    aggregator.put("name", "count");
+    aggregator.put("name", "first");
 
     Map<String, Object> sampling = new HashMap<>();
-    sampling.put("value", 1000);
-    sampling.put("unit", "years");
+    sampling.put("value", 1);
+    sampling.put("unit",
+        "milliseconds"); // “milliseconds”, “seconds”, “minutes”, “hours”, “days”, “weeks”, “months”, and “years”
 
     aggregator.put("sampling", sampling);
 
@@ -183,10 +162,41 @@ public class KairosDBManager implements IDataBaseManager {
 
     logger.info("sql：{}", json);
 
+//    json = "{\n"
+//        + "  \"metrics\": [\n"
+//        + "    {\n"
+//        + "      \"tags\": {\n"
+//        + "        \"deviceId\": [\n"
+//        + "          \"server2\"\n"
+//        + "        ]\n"
+//        + "      },\n"
+//        + "      \"name\": \"archive_file_search\",\n"
+//        + "      \"aggregators\": [\n"
+//        + "        {\n"
+//        + "          \"name\": \"first\",\n"
+//        + "          \"sampling\": {\n"
+//        + "            \"value\": \"1\",\n"
+//        + "            \"unit\": \"milliseconds\"\n"
+//        + "          }\n"
+////        + "          },\n"
+////        + "          \"align_sampling\": false\n"
+//        + "        }\n"
+//        + "      ]\n"
+//        + "    }\n"
+//        + "  ],\n"
+//        + "  \"plugins\": [],\n"
+//        + "  \"cache_time\": 0,\n"
+//        + "  \"time_zone\": \"Etc/GMT-8\",\n"
+//        + "  \"start_absolute\": 1651334400000,\n"
+//        + "  \"end_absolute\": 1652889600000\n"
+//        + "}";
+//    System.out.println(json);
+//    logger.info("sql：{}", json);
+
     long start = System.nanoTime();
     try {
       String response = ThuHttpRequest.sendPost(queryUrl, json);
-      logger.info("result: {}", response);
+      logger.info("result: {}", response); // TODO: move this out of time measurement?
     } catch (IOException e) {
       e.printStackTrace();
     }

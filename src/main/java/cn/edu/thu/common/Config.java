@@ -205,14 +205,16 @@ public class Config {
 
     String startTime = properties.getOrDefault("START_TIME", START_TIME).toString();
     if (startTime.toLowerCase().contains("min")) {
-      START_TIME = Long.MIN_VALUE;
+//      START_TIME = Long.MIN_VALUE;
+      // do nothing, just leave START_TIME as 0
     } else {
       START_TIME = Long.parseLong(startTime);
     }
 
     String endTime = properties.getOrDefault("END_TIME", END_TIME).toString();
     if (endTime.toLowerCase().contains("max")) {
-      END_TIME = Long.MAX_VALUE;
+//      END_TIME = Long.MAX_VALUE;
+      // do nothing, just leave END_TIME as 1946816515000 which means Wednesday, September 10, 2031 14:21:55 in milliseconds
     } else {
       END_TIME = Long.parseLong(endTime);
     }

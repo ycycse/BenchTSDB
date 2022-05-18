@@ -20,10 +20,10 @@ public class DatabaseFactory {
         return new IoTDBManager(config);
       case "INFLUXDB": // 1.8.10
         return new InfluxDBManager(config);
-      case "OPENTSDB":
-        return new OpenTSDBManager(config);
-      case "KAIROSDB":
+      case "KAIROSDB": // 1.3.0 with
         return new KairosDBManager(config);
+//      case "OPENTSDB":
+//        return new OpenTSDBManager(config);
 //      case "SUMMARYSTORE":
 //        return new SummaryStoreManager(config);
 //      case "WATERWHEEL":

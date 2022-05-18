@@ -51,7 +51,8 @@ public class TsFileManager implements IDataBaseManager {
   public TsFileManager(Config config) {
     this.config = config;
     this.filePath =
-        "root.test" + File.separator + "0" + File.separator + "0" + File.separator + config.FILE_PATH;
+        "root.test" + File.separator + "0" + File.separator + "0" + File.separator
+            + config.FILE_PATH;
   }
 
   public TsFileManager(Config config, int threadNum) {
@@ -197,7 +198,7 @@ public class TsFileManager implements IDataBaseManager {
     List<MeasurementSchema> schemas = tagToMeasurementSchemas(tag);
     NonAlignedTablet tablet = new NonAlignedTablet(tag, schemas,
         records.size());
-    for (Record record: records) {
+    for (Record record : records) {
       long timestamp = record.timestamp;
       for (int i = 0; i < schema.getFields().length; i++) {
         if (record.fields.get(i) != null) {
@@ -228,7 +229,7 @@ public class TsFileManager implements IDataBaseManager {
       tablet.bitMaps[i] = new BitMap(records.size());
     }
 
-    for (Record record: records) {
+    for (Record record : records) {
       int row = tablet.rowSize++;
       timestamps[row] = record.timestamp;
       for (int i = 0; i < schema.getFields().length; i++) {
@@ -292,7 +293,8 @@ public class TsFileManager implements IDataBaseManager {
   public long count(String tagValue, String field, long startTime, long endTime) {
 
     long start = System.nanoTime();
-    try (TsFileReader readTsFile = new TsFileReader(new TsFileSequenceReader(tagToFilePath(tagValue)))) {
+    try (TsFileReader readTsFile = new TsFileReader(
+        new TsFileSequenceReader(tagToFilePath(tagValue)))) {
 
       ArrayList<Path> paths = new ArrayList<>();
       paths.add(new Path(tagValue, field));
@@ -338,7 +340,7 @@ public class TsFileManager implements IDataBaseManager {
     tagWriterMap.clear();
     tagSchemasMap.clear();
 
-    logger.info("Total file size: {}", totalFileSize / (1024*1024.0));
+    logger.info("Total file size: {}", totalFileSize / (1024 * 1024.0));
     return System.nanoTime() - start;
   }
 }
