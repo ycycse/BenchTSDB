@@ -109,6 +109,18 @@
     </dependency>
 
     <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.3.3</version>
+<!--      https://mvnrepository.com/artifact/org.postgresql/postgresql-->
+    </dependency>
+<!--    <dependency>-->
+<!--      <groupId>postgresql</groupId>-->
+<!--      <artifactId>postgresql</artifactId>-->
+<!--      <version>9.1-901-1.jdbc4</version>-->
+<!--    </dependency>-->
+
+    <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-sql_2.11</artifactId>
       <version>2.3.0</version>

@@ -8,6 +8,7 @@ import cn.edu.thu.database.influxdb.InfluxDBManager;
 import cn.edu.thu.database.iotdb.IoTDBManager;
 import cn.edu.thu.database.kairosdb.KairosDBManager;
 import cn.edu.thu.database.opentsdb.OpenTSDBManager;
+import cn.edu.thu.database.timescaledb.TimescaleDBManager;
 //import cn.edu.thu.database.waterwheel.WaterWheelManager;
 
 public class DatabaseFactory {
@@ -16,12 +17,14 @@ public class DatabaseFactory {
     switch (config.DATABASE) {
       case "NULL":
         return new NullManager();
-      case "IOTDB": // 0.14.0-snapshot
+      case "IOTDB": // v0.14.0-snapshot
         return new IoTDBManager(config);
-      case "INFLUXDB": // 1.8.10
+      case "INFLUXDB": // v1.8.10
         return new InfluxDBManager(config);
-      case "KAIROSDB": // 1.3.0 on Cassandra 3.11.13
+      case "KAIROSDB": // v1.3.0 on Cassandra v3.11.13
         return new KairosDBManager(config);
+      case "TIMESCALEDB": // v2.6.1 on PostgreSQL v14.3
+        return new TimescaleDBManager(config);
 //      case "OPENTSDB":
 //        return new OpenTSDBManager(config);
 //      case "SUMMARYSTORE":

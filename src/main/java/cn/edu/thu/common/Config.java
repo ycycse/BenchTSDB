@@ -63,8 +63,14 @@ public class Config {
 //    public String OPENTSDB_URL = "http://192.168.10.64:4242";
 
   public String KAIROSDB_URL = "http://127.0.0.1:8080";
-  public String CASSANDRA_IP = "127.0.0.1";
-  public int CASSANDRA_PORT = 9042;
+//  public String CASSANDRA_IP = "127.0.0.1";
+//  public int CASSANDRA_PORT = 9042;
+
+  public String TIMESCALEDB_HOST = "127.0.0.1";
+  public int TIMESCALEDB_PORT = 5432;
+  public String TIMESCALEDB_USERNAME = "postgres";
+  public String TIMESCALEDB_PASSWORD = "123";
+  public String TIMESCALEDB_DATABASE = "mydb";
 
   public String SUMMARYSTORE_PATH = "sstore";
 
@@ -156,9 +162,19 @@ public class Config {
     INFLUXDB_DATABASE = properties.getOrDefault("INFLUXDB_DATABASE", INFLUXDB_DATABASE).toString();
 
     KAIROSDB_URL = properties.getOrDefault("KAIROSDB_URL", KAIROSDB_URL).toString();
-    CASSANDRA_IP = properties.getOrDefault("CASSANDRA_IP", CASSANDRA_IP).toString();
-    CASSANDRA_PORT = Integer
-        .parseInt(properties.getOrDefault("CASSANDRA_PORT", CASSANDRA_PORT).toString());
+//    CASSANDRA_IP = properties.getOrDefault("CASSANDRA_IP", CASSANDRA_IP).toString();
+//    CASSANDRA_PORT = Integer
+//        .parseInt(properties.getOrDefault("CASSANDRA_PORT", CASSANDRA_PORT).toString());
+
+    TIMESCALEDB_HOST = properties.getOrDefault("TIMESCALEDB_HOST", TIMESCALEDB_HOST).toString();
+    TIMESCALEDB_PORT = Integer
+        .parseInt(properties.getOrDefault("TIMESCALEDB_PORT", TIMESCALEDB_PORT).toString());
+    TIMESCALEDB_USERNAME = properties.getOrDefault("TIMESCALEDB_USERNAME", TIMESCALEDB_USERNAME)
+        .toString();
+    TIMESCALEDB_PASSWORD = properties.getOrDefault("TIMESCALEDB_PASSWORD", TIMESCALEDB_PASSWORD)
+        .toString();
+    TIMESCALEDB_DATABASE = properties.getOrDefault("TIMESCALEDB_DATABASE", TIMESCALEDB_DATABASE)
+        .toString();
 
     OPENTSDB_URL = properties.getOrDefault("OPENTSDB_URL", OPENTSDB_URL).toString();
     WATERWHEEL_IP = properties.getOrDefault("WATERWHEEL_IP", WATERWHEEL_IP).toString();

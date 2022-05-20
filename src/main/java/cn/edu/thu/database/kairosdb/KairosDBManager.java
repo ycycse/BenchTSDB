@@ -45,7 +45,12 @@ public class KairosDBManager implements IDataBaseManager {
 //      }
 //    }
     logger.info(
-        "NOTE: I don't clear existent data for KairosDB. Please you assure KairosDB is started up with brand new settings.");
+        "NOTE: I don't clear existent data for KairosDB. Please you assure KairosDB is started up with brand new Cassandra.");
+    logger.info("To reset your KairosDB database to default, run something like that: "
+        + "(1) Enter Cassandra Query Language terminal by running cqlsh. "
+        + "(2) Drop kairosdb keyspace: cqlsh> DROP KEYSPACE kairosdb ; "
+        + "(3) Stopping KairosDB: sudo /opt/kairosdb/bin/kairosdb.sh stop "
+        + "(4) Running KairosDB: sudo /opt/kairosdb/bin/kairosdb.sh start ");
   }
 
   @Override
