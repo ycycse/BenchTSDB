@@ -185,13 +185,14 @@ public class TimescaleDBManager implements IDataBaseManager {
       tableCreated = true;
     }
 
-    long start = System.nanoTime();
+    long start = 0;
     try (Statement statement = connection.createStatement()) {
       for (Record record : records) {
         String sql = getInsertOneBatchSql(schema, record.timestamp, record.fields);
         statement.addBatch(sql);
         logger.debug(sql);
       }
+      start = System.nanoTime();
       statement.executeBatch();
     } catch (Exception e) {
       e.printStackTrace();
