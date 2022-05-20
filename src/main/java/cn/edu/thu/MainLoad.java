@@ -73,9 +73,9 @@ public class MainLoad {
         break;
       }
 
-//      if (i < config.BEGIN_FILE || i > config.END_FILE) {
-//        continue;
-//      }
+      if (i < config.BEGIN_FILE || i > config.END_FILE) {
+        continue; // only load files numbered in [config.BEGIN_FILE, config.END_FILE]
+      }
 
       String filePath = files.get(i);
       if (filePath.contains(".DS_Store")) {

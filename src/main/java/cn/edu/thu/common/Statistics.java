@@ -7,7 +7,7 @@ public class Statistics {
     public AtomicLong fileNum = new AtomicLong(0);
     public AtomicLong recordNum = new AtomicLong(0);
     public AtomicLong pointNum = new AtomicLong(0);
-    public AtomicLong timeCost = new AtomicLong(0);
+    public AtomicLong timeCost = new AtomicLong(0); // unit: ns
 
     public Statistics(){
 

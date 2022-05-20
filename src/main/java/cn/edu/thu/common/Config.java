@@ -30,7 +30,7 @@ public class Config {
 
 
   public int BEGIN_FILE = 0;
-  public int END_FILE = 100000;
+  public int END_FILE = Integer.MAX_VALUE;
 
   public static final String TAG_NAME = "deviceId";
   public static final String TIME_NAME = "time";
@@ -63,6 +63,7 @@ public class Config {
 //    public String OPENTSDB_URL = "http://192.168.10.64:4242";
 
   public String KAIROSDB_URL = "http://127.0.0.1:8080";
+  public Boolean KAIROSDB_BATCH_POINTS = true;
 //  public String CASSANDRA_IP = "127.0.0.1";
 //  public int CASSANDRA_PORT = 9042;
 
@@ -162,6 +163,8 @@ public class Config {
     INFLUXDB_DATABASE = properties.getOrDefault("INFLUXDB_DATABASE", INFLUXDB_DATABASE).toString();
 
     KAIROSDB_URL = properties.getOrDefault("KAIROSDB_URL", KAIROSDB_URL).toString();
+    KAIROSDB_BATCH_POINTS = Boolean.parseBoolean(
+        properties.getOrDefault("KAIROSDB_BATCH_POINTS", KAIROSDB_BATCH_POINTS).toString());
 //    CASSANDRA_IP = properties.getOrDefault("CASSANDRA_IP", CASSANDRA_IP).toString();
 //    CASSANDRA_PORT = Integer
 //        .parseInt(properties.getOrDefault("CASSANDRA_PORT", CASSANDRA_PORT).toString());

@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,31 +61,42 @@ public class KairosDBManager implements IDataBaseManager {
 
   @Override
   public long insertBatch(List<Record> records, Schema schema) {
-    List<KairosDBPoint> points = new ArrayList<>();
+    List<KairosDBPoint> points;
 
     // convert to kairosdb data points
-    for (Record record : records) {
-      points.addAll(convertToPoints(record, schema));
-      // TODO: BUT this way of constructing points row by row is not the best of KairosDB?
-      // TODO: can we make all points of a sensor in a batch? like the example below:?
-      // {
-      //      "name": "archive_file_tracked",
-      //      "datapoints": [[1359788400000, 123], [1359788300000, 13.2], [1359788410000, 23.1]],
-      //      "tags": {
-      //          "host": "server1",
-      //          "data_center": "DC1"
-      //      },
-      //      "ttl": 300
-      //  },
+    if (!config.KAIROSDB_BATCH_POINTS) {
+      /*
+       use “timestamp” with “value” for a single data point。
+       be like:
+       {"name":"struct@waste%105008","tags":{"deviceId":"root.T000100010002.90003"},"timestamp":1601168451210,"value":0.0},
+       {"name":"struct@waste%105008","tags":{"$ref":"$[26815].tags"},"timestamp":1601168452216,"value":0.0},
+       ...
+       */
+      points = new ArrayList<>();
+      for (Record record : records) {
+        points.addAll(convertToSinglePoints(record, schema));
+      }
+    } else {
+      /*
+       use “datapoints” to post multiple data points。
+       be like:
+       {
+        "name":"struct@waste%105008",
+        "tags":{"deviceId":"root.T000100010002.90003"},
+        "datapoints":[[1601168451210,0.0],[1601168452216,0.0],...]
+        }
+       */
+      points = convertToBatchedPoints(records, schema);
     }
+
     String body = JSON.toJSONString(points);
+//    System.out.println(body);
 
     long start = System.nanoTime();
-
-    String response = null;
+//    String response = null;
     try {
-      response = ThuHttpRequest.sendPost(writeUrl, body);
-      logger.info("response: {}", response);
+      ThuHttpRequest.sendPost(writeUrl, body);
+//      logger.info("response: {}", response); // comment this to avoid logger.info time cost
     } catch (IOException e) {
       e.printStackTrace();
       logger.error("meet error when writing: {}", e.getMessage());
@@ -93,11 +105,46 @@ public class KairosDBManager implements IDataBaseManager {
     return System.nanoTime() - start;
   }
 
-  private List<KairosDBPoint> convertToPoints(Record record, Schema schema) {
+
+  private List<KairosDBPoint> convertToBatchedPoints(List<Record> records, Schema schema) {
+    // TODO: 这里默认要求一个batch的records的tag、sensors都是一样的
+
+    List<KairosDBPoint> points = new ArrayList<>();
+    Map<String, String> tags = new HashMap<>();
+    tags.put(Config.TAG_NAME, schema.getTag());
+    for (String sensor : schema.getFields()) {
+      KairosDBPoint point = new KairosDBPoint();
+      point.setTags(tags);
+      point.setName(sensor);
+      points.add(point);
+    }
+
+    for (Record record : records) {
+      for (int i = 0; i < schema.getFields().length; i++) {
+        Object value = record.fields.get(i);
+        if (value == null) {
+          continue;
+        }
+        KairosDBPoint kairosDBPoint = points.get(i);
+        List<Object> point = new ArrayList<>();
+        point.add(record.timestamp);
+        point.add(value);
+        kairosDBPoint.addDatapoints(point);
+      }
+    }
+
+    // remove KairosDBPoint that has empty datapoint list
+    points.removeIf(point -> point.getDatapoints() == null);
+
+    return points;
+  }
+
+  private List<KairosDBPoint> convertToSinglePoints(Record record, Schema schema) {
     List<KairosDBPoint> points = new ArrayList<>();
 
     Map<String, String> tags = new HashMap<>();
     tags.put(Config.TAG_NAME, record.tag);
+
     for (int i = 0; i < schema.getFields().length; i++) {
       Object value = record.fields.get(i);
       if (value == null) {
@@ -149,12 +196,12 @@ public class KairosDBManager implements IDataBaseManager {
     List<Map<String, Object>> aggregators = new ArrayList<>();
 
     Map<String, Object> aggregator = new HashMap<>();
-    aggregator.put("name", "first");
+    aggregator.put("name", "count");
 
     Map<String, Object> sampling = new HashMap<>();
-    sampling.put("value", 1);
-    sampling.put("unit",
-        "milliseconds"); // “milliseconds”, “seconds”, “minutes”, “hours”, “days”, “weeks”, “months”, and “years”
+    sampling.put("value", 10);
+    // “milliseconds”, “seconds”, “minutes”, “hours”, “days”, “weeks”, “months”, and “years”
+    sampling.put("unit", "seconds");
 
     aggregator.put("sampling", sampling);
 
