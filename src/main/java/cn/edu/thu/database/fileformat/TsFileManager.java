@@ -290,31 +290,31 @@ public class TsFileManager implements IDataBaseManager {
   }
 
   @Override
-  public long count(String tagValue, String field, long startTime, long endTime) {
+  public long query() {
 
     long start = System.nanoTime();
-    try (TsFileReader readTsFile = new TsFileReader(
-        new TsFileSequenceReader(tagToFilePath(tagValue)))) {
-
-      ArrayList<Path> paths = new ArrayList<>();
-      paths.add(new Path(tagValue, field));
-      IExpression filter = new SingleSeriesExpression(new Path(tagValue + "." + field),
-          new AndFilter(TimeFilter.gtEq(startTime), TimeFilter.ltEq(endTime)));
-
-      QueryExpression queryExpression = QueryExpression.create(paths, filter);
-
-      QueryDataSet queryDataSet = readTsFile.query(queryExpression);
-
-      int i = 0;
-      while (queryDataSet.hasNext()) {
-        i++;
-        queryDataSet.next();
-      }
-
-      logger.info("TsFile count result: {}", i);
-    } catch (IOException e) {
-      logger.error("Cannot count", e);
-    }
+//    try (TsFileReader readTsFile = new TsFileReader(
+//        new TsFileSequenceReader(tagToFilePath(tagValue)))) {
+//
+//      ArrayList<Path> paths = new ArrayList<>();
+//      paths.add(new Path(tagValue, field));
+//      IExpression filter = new SingleSeriesExpression(new Path(tagValue + "." + field),
+//          new AndFilter(TimeFilter.gtEq(startTime), TimeFilter.ltEq(endTime)));
+//
+//      QueryExpression queryExpression = QueryExpression.create(paths, filter);
+//
+//      QueryDataSet queryDataSet = readTsFile.query(queryExpression);
+//
+//      int i = 0;
+//      while (queryDataSet.hasNext()) {
+//        i++;
+//        queryDataSet.next();
+//      }
+//
+//      logger.info("TsFile count result: {}", i);
+//    } catch (IOException e) {
+//      logger.error("Cannot count", e);
+//    }
 
     return System.nanoTime() - start;
   }

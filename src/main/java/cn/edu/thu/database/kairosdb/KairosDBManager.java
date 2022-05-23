@@ -170,26 +170,26 @@ public class KairosDBManager implements IDataBaseManager {
    * "unit": "minutes" } } ] } ] }
    */
   @Override
-  public long count(String tagValue, String field, long startTime, long endTime) {
+  public long query() {
 
     Map<String, Object> queryMap = new HashMap<>();
 
-    if (startTime == -1 || endTime == -1) {
+    if (config.QUERY_START_TIME == -1 || config.QUERY_END_TIME == -1) {
       queryMap.put(QUERY_START_TIME, 0);
       queryMap.put(QUERY_END_TIME, Long.MAX_VALUE);
     } else {
-      queryMap.put(QUERY_START_TIME, startTime);
-      queryMap.put(QUERY_END_TIME, endTime);
+      queryMap.put(QUERY_START_TIME, config.QUERY_START_TIME);
+      queryMap.put(QUERY_END_TIME, config.QUERY_END_TIME);
     }
 
     List<Map<String, Object>> subQueries = new ArrayList<>();
 
     Map<String, Object> subQuery = new HashMap<>();
-    subQuery.put("name", field);
+    subQuery.put("name", config.QUERY_FIELD);
 
     Map<String, List<String>> tags = new HashMap<>();
     List<String> tagVs = new ArrayList<>();
-    tagVs.add(tagValue);
+    tagVs.add(config.QUERY_TAG);
     tags.put(Config.TAG_NAME, tagVs);
     subQuery.put("tags", tags);
 

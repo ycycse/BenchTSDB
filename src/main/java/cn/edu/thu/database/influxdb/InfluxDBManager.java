@@ -22,7 +22,7 @@ public class InfluxDBManager implements IDataBaseManager {
 
   private InfluxDB influxDB;
   private static Logger logger = LoggerFactory.getLogger(InfluxDBManager.class);
-  private String measurementId="tb1";
+  private String measurementId = "tb1";
   private String database;
   private Config config;
 
@@ -49,28 +49,85 @@ public class InfluxDBManager implements IDataBaseManager {
   }
 
   @Override
-  public long count(String tagValue, String field, long startTime, long endTime) {
+  public long query() {
 
-    String sql;
+//    String sql;
+//
+//    if (startTime == -1 || endTime == -1) {
+//      sql = String.format(COUNT_SQL_WITHOUT_TIME, field, measurementId, Config.TAG_NAME, tagValue);
+//    } else {
+//      sql = String
+//          .format(COUNT_SQL_WITH_TIME, field, measurementId, startTime, endTime, Config.TAG_NAME,
+//              tagValue);
+//    }
+//
+//    logger.info("Executing sql {}", sql);
 
-    if (startTime == -1 || endTime == -1) {
-      sql = String.format(COUNT_SQL_WITHOUT_TIME, field, measurementId, Config.TAG_NAME, tagValue);
-    } else {
-      sql = String
-          .format(COUNT_SQL_WITH_TIME, field, measurementId, startTime, endTime, Config.TAG_NAME,
-              tagValue);
+    String sql = null;
+    String queryDatabase = null;
+    switch (config.QUERY_TYPE) {
+      case "SINGLE_SERIES_RAW_QUERY":
+        // use yanchang dataset
+        queryDatabase = "yanchang";
+        sql = String.format(
+            "select collecttime from tb1 where deviceId='root.T000100010002.90003' limit %d",
+            config.QUERY_PARAM);
+        break;
+      case "MULTI_SERIES_ALIGN_QUERY":
+        // use dianchang dataset
+        queryDatabase = "dianchang";
+        String sql_format = "select %s from tb1 where deviceId='root.DianChang.d1'";
+        StringBuilder selectSensors = new StringBuilder();
+        for (int i = 1; i < config.QUERY_PARAM + 1; i++) {
+          selectSensors.append("sensor" + i);
+          if (i < config.QUERY_PARAM) {
+            selectSensors.append(",");
+          }
+        }
+        sql = String.format(sql_format, selectSensors.toString());
+        break;
+      case "SINGLE_SERIES_COUNT_QUERY":
+        // use yanchang dataset
+        queryDatabase = "yanchang";
+        switch (config.QUERY_PARAM) {
+          case 1:
+            sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1601023212859000000";
+            break;
+          case 100:
+            sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1601023262692000000";
+            break;
+          case 10000:
+            sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1601045811969000000";
+            break;
+          case 1000000:
+            sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1602131946370000000";
+            break;
+          default:
+            logger.error("QUERY_PARAM not correct! Please check your configurations.");
+            break;
+        }
+        break;
+      case "SINGLE_SERIES_DOWNSAMPLING_QUERY":
+        // use yanchang dataset
+        queryDatabase = "yanchang";
+        sql = String.format(
+            "select first(collecttime) from tb1 where deviceId='root.T000100010002.90003' "
+                + "and time>=1601023212859000000 and time<=1602479033307000000 group by time(%dms)",
+            config.QUERY_PARAM);
+        break;
+      default:
+        logger.error("QUERY_TYPE not correct! Please check your configurations.");
+        break;
     }
-
-    logger.info("Executing sql {}", sql);
+    logger.info("Begin query: {}", sql);
 
     long start = System.nanoTime();
+    QueryResult queryResult = influxDB.query(new Query(sql, queryDatabase));
+    long elapsedTime = System.nanoTime() - start;
 
-    QueryResult queryResult = influxDB.query(new Query(sql, database));
-
-    logger.info(queryResult.toString());
-
-    return System.nanoTime() - start;
-
+    logger.info("Query {} finished. Total lines: {}", sql,
+        queryResult.getResults().get(0).getSeries().get(0).getValues().size());
+    return elapsedTime;
   }
 
   @Override
@@ -102,7 +159,6 @@ public class InfluxDBManager implements IDataBaseManager {
         e.printStackTrace();
       }
     }
-
     return System.nanoTime() - start;
   }
 
@@ -121,6 +177,10 @@ public class InfluxDBManager implements IDataBaseManager {
 
     HashMap<String, Object> fieldSet = new HashMap<>();
     for (int i = 0; i < schema.getFields().length; i++) {
+      Object value = record.fields.get(i);
+      if (value == null) {
+        continue;
+      }
       fieldSet.put(schema.getFields()[i], record.fields.get(i));
     }
 

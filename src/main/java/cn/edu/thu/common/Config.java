@@ -88,6 +88,12 @@ public class Config {
 
   // for query
 
+  public String QUERY_TYPE = "SINGLE_SERIES_RAW_QUERY";
+  public int QUERY_PARAM = 1;
+
+  private static int sensorNum_for_MULTI_SERIES_ALIGN_QUERY = 1000;
+  public String[] sensorArray_for_MULTI_SERIES_ALIGN_QUERY = new String[sensorNum_for_MULTI_SERIES_ALIGN_QUERY];
+
   // geolife
 //    public String QUERY_TAG = "000";
 //    public String FIELD = "Latitude";
@@ -96,9 +102,9 @@ public class Config {
 
   // redd
   public String QUERY_TAG = "house_1_channel_1";
-  public String FIELD = "value";
-  public long START_TIME = 0;
-  public long END_TIME = 1946816515000L;
+  public String QUERY_FIELD = "value";
+  public long QUERY_START_TIME = 0;
+  public long QUERY_END_TIME = 1946816515000L;
 
   // noaa
 //    public String QUERY_TAG = "010230_99999";
@@ -222,24 +228,30 @@ public class Config {
         properties.getOrDefault("WATERWHEEL_QUERY_PORT", WATERWHEEL_QUERY_PORT).toString());
     LOCAL = Boolean.parseBoolean(properties.getOrDefault("LOCAL", LOCAL).toString());
 
+    QUERY_TYPE = properties.getOrDefault("QUERY_TYPE", QUERY_TYPE).toString();
+    QUERY_PARAM = Integer.parseInt(properties.getOrDefault("QUERY_PARAM", QUERY_PARAM).toString());
+
+    for (int i = 1; i < sensorNum_for_MULTI_SERIES_ALIGN_QUERY + 1; i++) {
+      sensorArray_for_MULTI_SERIES_ALIGN_QUERY[i - 1] = "sensor" + i; // for dianchang dataset
+    }
+
     QUERY_TAG = properties.getOrDefault("QUERY_TAG", QUERY_TAG).toString();
+    QUERY_FIELD = properties.getOrDefault("QUERY_FIELD", QUERY_FIELD).toString();
 
-    FIELD = properties.getOrDefault("FIELD", FIELD).toString();
-
-    String startTime = properties.getOrDefault("START_TIME", START_TIME).toString();
+    String startTime = properties.getOrDefault("QUERY_START_TIME", QUERY_START_TIME).toString();
     if (startTime.toLowerCase().contains("min")) {
 //      START_TIME = Long.MIN_VALUE;
       // do nothing, just leave START_TIME as 0
     } else {
-      START_TIME = Long.parseLong(startTime);
+      QUERY_START_TIME = Long.parseLong(startTime);
     }
 
-    String endTime = properties.getOrDefault("END_TIME", END_TIME).toString();
+    String endTime = properties.getOrDefault("QUERY_END_TIME", QUERY_END_TIME).toString();
     if (endTime.toLowerCase().contains("max")) {
 //      END_TIME = Long.MAX_VALUE;
       // do nothing, just leave END_TIME as 1946816515000 which means Wednesday, September 10, 2031 14:21:55 in milliseconds
     } else {
-      END_TIME = Long.parseLong(endTime);
+      QUERY_END_TIME = Long.parseLong(endTime);
     }
 
   }

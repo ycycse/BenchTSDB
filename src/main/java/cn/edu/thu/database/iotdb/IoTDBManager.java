@@ -4,7 +4,6 @@ import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
-import cn.edu.thu.database.fileformat.TsFileManager;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +12,7 @@ import java.util.Map;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.iotdb.session.Session;
+import org.apache.iotdb.session.SessionDataSet;
 import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -75,21 +75,22 @@ public class IoTDBManager implements IDataBaseManager {
   @Override
   public long insertBatch(List<Record> records, Schema schema) { // use insertTablet interface
 //    Tablet tablet = genTablet(records, schema); // Note this part of time is not included
-    long start = System.nanoTime();
+    long elapsedTime = 0;
     try {
       if (config.useAlignedTablet) {
-        insertBatchAligned(records, session, schema);
+        elapsedTime = insertBatchAligned(records, session, schema);
       } else {
-        insertBatchNonAligned(records, session, schema);
+        elapsedTime = insertBatchNonAligned(records, session, schema);
       }
     } catch (IOException e) {
       logger.error(e.getMessage());
     }
-    return System.nanoTime() - start;
+    return elapsedTime;
   }
 
-  private void insertBatchAligned(List<Record> records, Session session, Schema schema) {
+  private long insertBatchAligned(List<Record> records, Session session, Schema schema) {
     Tablet tablet = convertToTablet(records, schema);
+    long start = System.nanoTime();
     try {
 //      if (config.useAlignedSeries) { //TODO: whether to use this?
 //        writer.writeAligned(tablet);
@@ -105,6 +106,7 @@ public class IoTDBManager implements IDataBaseManager {
     } catch (Exception e) {
       logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
     }
+    return System.nanoTime() - start;
   }
 
   private Tablet convertToTablet(List<Record> records, Schema schema) {
@@ -175,7 +177,7 @@ public class IoTDBManager implements IDataBaseManager {
   }
 
 
-  private void insertBatchNonAligned(List<Record> records, Session session, Schema schema)
+  private long insertBatchNonAligned(List<Record> records, Session session, Schema schema)
       throws IOException {
     throw new IOException("not implemented");
 //    NonAlignedTablet tablet = convertToNonAlignedTablet(records, schema);
@@ -247,47 +249,86 @@ public class IoTDBManager implements IDataBaseManager {
   }
 
   @Override
-  public long count(String tagValue, String field, long startTime, long endTime) {
-//    Map<String, Object> queryMap = new HashMap<>();
-//    queryMap.put("msResolution", true);
-//
-//    Map<String, Object> subQuery = new HashMap<>();
-//
-//    // query tag
-//    Map<String, String> subsubQuery = new HashMap<>();
-//    subsubQuery.put(Config.TAG_NAME, tagValue);
-//    subQuery.put("tags", subsubQuery);
-//
-//    if (startTime == -1 || endTime == -1) {
-//      logger.error("do not support");
-//      return -1;
-//    } else {
-//      long diff = endTime - startTime;
-//      queryMap.put("start", startTime);
-//      subQuery.put("downsample", (diff) + "ms-count");
-//
-//    }
-//
-//    subQuery.put("metric", field);
-//    subQuery.put("aggregator", "none");
-//
-//    List<Map<String, Object>> queries = new ArrayList<>();
-//    queries.add(subQuery);
-//    queryMap.put("queries", queries);
-//
-//    String sql = JSON.toJSONString(queryMap);
-//
-//    logger.info("sql: {}", sql);
+  public long query() {
+    String sql = null;
+    switch (config.QUERY_TYPE) {
+      case "SINGLE_SERIES_RAW_QUERY":
+        // use yanchang dataset
+        sql = String.format("select collecttime from root.T000100010002.90003 limit %d",
+            config.QUERY_PARAM);
+        break;
+      case "MULTI_SERIES_ALIGN_QUERY":
+        // use dianchang dataset
+        String sql_format = "select %s from root.DianChang.d1";
+        StringBuilder selectSensors = new StringBuilder();
+        for (int i = 1; i < config.QUERY_PARAM + 1; i++) {
+          selectSensors.append("sensor" + i);
+          if (i < config.QUERY_PARAM) {
+            selectSensors.append(",");
+          }
+        }
+        sql = String.format(sql_format, selectSensors.toString());
+        break;
+      case "SINGLE_SERIES_COUNT_QUERY":
+        // use yanchang dataset
+        switch (config.QUERY_PARAM) {
+          case 1:
+            sql = "select count(collecttime) from root.T000100010002.90003 where time<=1601023212859";
+            break;
+          case 100:
+            sql = "select count(collecttime) from root.T000100010002.90003 where time<=1601023262692";
+            break;
+          case 10000:
+            sql = "select count(collecttime) from root.T000100010002.90003 where time<=1601045811969";
+            break;
+          case 1000000:
+            sql = "select count(collecttime) from root.T000100010002.90003 where time<=1602131946370";
+            break;
+          default:
+            logger.error("QUERY_PARAM not correct! Please check your configurations.");
+            break;
+        }
+        break;
+      case "SINGLE_SERIES_DOWNSAMPLING_QUERY":
+        // use yanchang dataset
+        switch (config.QUERY_PARAM) { // note that the startTime is modified to align with influxdb group by time style
+          case 1:
+            sql = "select first_value(collecttime) from root.T000100010002.90003 group by ([1601023212859, 1602479033308), 1ms)";
+            break;
+          case 100:
+            sql = "select first_value(collecttime) from root.T000100010002.90003 group by ([1601023212800, 1602479033308), 100ms)";
+            break;
+          case 10000:
+            sql = "select first_value(collecttime) from root.T000100010002.90003 group by ([1601023210000, 1602479033308), 10000ms)";
+            break;
+          case 1000000:
+            sql = "select first_value(collecttime) from root.T000100010002.90003 group by ([1601023000000, 1602479033308), 1000000ms)";
+            break;
+          default:
+            logger.error("QUERY_PARAM not correct! Please check your configurations.");
+            break;
+        }
+        break;
+      default:
+        logger.error("QUERY_TYPE not correct! Please check your configurations.");
+        break;
+    }
+    logger.info("Begin query: {}", sql);
+
+    int c = 0;
     long start = System.nanoTime();
-//
-//    try {
-//      String response = ThuHttpRequest.sendPost(queryUrl, sql);
-//      logger.info(response);
-//    } catch (IOException e) {
-//      e.printStackTrace();
-//    }
-//
-    return System.nanoTime() - start;
+    try (SessionDataSet dataSet = session.executeQueryStatement(sql)) {
+      while (dataSet.hasNext()) {
+        dataSet.next();
+        c++;
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    long elapsedTime = System.nanoTime() - start;
+
+    logger.info("Query {} finished. Total lines: {}", sql, c);
+    return elapsedTime;
   }
 
   @Override

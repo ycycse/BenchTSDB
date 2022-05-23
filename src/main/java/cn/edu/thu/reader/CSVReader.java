@@ -157,12 +157,13 @@ public class CSVReader extends BasicReader {
       if (typeMap == null) {
         extractTypeMap();
       }
-      if (!typeMap.containsKey(columnName)) {
+      String seriesName = devicePos != -1 ? columnName : tag + "." + columnName;
+      if (!typeMap.containsKey(seriesName)) {
         throw new IOException(
             "something went wrong: TYPE_INFO_EXIST=true while typeMap does not contain series "
-                + columnName);
+                + seriesName);
       }
-      schema.getTypes()[i - 1] = typeMap.get(columnName);
+      schema.getTypes()[i - 1] = typeMap.get(seriesName);
     }
     return schema;
   }

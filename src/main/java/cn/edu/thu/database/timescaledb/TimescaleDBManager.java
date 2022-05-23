@@ -21,7 +21,7 @@ public class TimescaleDBManager implements IDataBaseManager {
   private static final String POSTGRESQL_JDBC_NAME = "org.postgresql.Driver";
   private static final String POSTGRESQL_URL = "jdbc:postgresql://%s:%s/%s";
 
-  private static final String tableName = "tb1";
+  //  private static final String tableName = "tb1";
   private boolean tableCreated = false;
 
   // chunk_time_interval=7d
@@ -87,7 +87,7 @@ public class TimescaleDBManager implements IDataBaseManager {
   }
 
   @Override
-  public long count(String tagValue, String field, long startTime, long endTime) {
+  public long query() {
 
 //    String sql;
 //
@@ -131,27 +131,32 @@ public class TimescaleDBManager implements IDataBaseManager {
 
   private void registerSchema(Schema schema) {
     try (Statement statement = connection.createStatement()) {
-      String pgsql = getCreateTableSql(tableName, schema);
+      String pgsql = getCreateTableSql(schema);
       logger.info("CreateTableSQL Statement:  {}", pgsql);
       statement.execute(pgsql);
-      logger.debug(
-          "CONVERT_TO_HYPERTABLE Statement:  {}", String.format(CONVERT_TO_HYPERTABLE, tableName));
-      statement.execute(String.format(CONVERT_TO_HYPERTABLE, tableName));
+//      logger.info(
+//          "CONVERT_TO_HYPERTABLE Statement:  {}",
+//          String.format(CONVERT_TO_HYPERTABLE, encapName(schema.getTag())));
+//      statement.execute(String.format(CONVERT_TO_HYPERTABLE, schema.getTag()));
     } catch (Exception e) {
       logger.error("Can't create PG table because: {}", e.getMessage());
     }
   }
 
-  private String getCreateTableSql(String tableName, Schema schema) {
-    StringBuilder sqlBuilder = new StringBuilder("CREATE TABLE ").append(tableName).append(" (");
-    sqlBuilder.append("time BIGINT NOT NULL, device TEXT NOT NULL");
+  private String getCreateTableSql(Schema schema) {
+    StringBuilder sqlBuilder = new StringBuilder("CREATE TABLE ")
+        .append(encapName(schema.getTag()))
+        .append(" (");
+    sqlBuilder
+        .append("time BIGINT NOT NULL"); // TODO: 因为这个数据库要求先注册表格schema，所以不再所有设备一张表格了，而是一个设备一张表方便一些
+//    sqlBuilder.append("time BIGINT NOT NULL, device TEXT NOT NULL");
 //    for (Map.Entry<String, String> pair : config.getDEVICE_TAGS().entrySet()) {
 //      sqlBuilder.append(", ").append(pair.getKey()).append(" TEXT NOT NULL");
 //    }
     for (int i = 0; i < schema.getFields().length; i++) {
       sqlBuilder
           .append(", ")
-          .append(transformColumnName(schema.getFields()[i]))
+          .append(encapName(schema.getFields()[i]))
           .append(" ")
           .append(typeMap(schema.getTypes()[i]))
           .append(" NULL ");
@@ -201,8 +206,8 @@ public class TimescaleDBManager implements IDataBaseManager {
     return System.nanoTime() - start;
   }
 
-  private String transformColumnName(String name) {
-    return "\"" + name + "\""; // to escape special characters like -,@
+  private String encapName(String name) {
+    return "\"" + name + "\""; // to escape special characters like -,@,.
   }
 
   /**
@@ -213,13 +218,14 @@ public class TimescaleDBManager implements IDataBaseManager {
    */
   private String getInsertOneBatchSql(Schema schema, long timestamp, List<Object> values) {
     StringBuilder builder = new StringBuilder();
-    builder.append("insert into ").append(tableName).append("(time,device");
+    builder.append("insert into ").append(encapName(schema.getTag())).append("(time");
+//    builder.append("insert into ").append(tableName).append("(time,device");
     for (String sensor : schema.getFields()) {
-      builder.append(",").append(transformColumnName(sensor));
+      builder.append(",").append(encapName(sensor));
     }
     builder.append(") values(");
     builder.append(timestamp);
-    builder.append(",'").append(schema.getTag()).append("'");
+//    builder.append(",'").append(schema.getTag()).append("'");
     for (int i = 0; i < values.size(); i++) {
       Object value = values.get(i);
       if (schema.getTypes()[i] == String.class && value != null) {

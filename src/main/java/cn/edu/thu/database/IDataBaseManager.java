@@ -27,13 +27,7 @@ public interface IDataBaseManager {
     void initClient();
 
 
-    /**
-     *
-     * @param tagValue queried deviceId
-     * @param field queried field
-     * @return time cost in ns
-     */
-    long count(String tagValue, String field, long startTime, long endTime);
+    long query();
 
     /**
      * @return time cost in ns

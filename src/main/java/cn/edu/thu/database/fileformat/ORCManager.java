@@ -248,49 +248,49 @@ public class ORCManager implements IDataBaseManager {
   }
 
   @Override
-  public long count(String tagValue, String field, long startTime, long endTime) {
+  public long query() {
 
     long start = System.nanoTime();
 
-    // todo add type in parameter and config
-    String schema = getReadSchema(field, Double.class);
-    try {
-      Reader reader = OrcFile.createReader(new Path(tagToFilePath(tagValue)),
-          OrcFile.readerOptions(new Configuration()));
-      TypeDescription readSchema = TypeDescription.fromString(schema);
-
-      VectorizedRowBatch batch = readSchema.createRowBatch();
-      RecordReader rowIterator = reader.rows(reader.options().schema(readSchema));
-
-      int result = 0;
-      while (rowIterator.nextBatch(batch)) {
-        for (int r = 0; r < batch.size; ++r) {
-
-          // time, deviceId, field
-          long t = ((LongColumnVector) batch.cols[0]).vector[r];
-          if (t < startTime || t > endTime) {
-            continue;
-          }
-
-          if (!config.splitFileByDevice) {
-            String deviceId = ((BytesColumnVector) batch.cols[1]).toString(r);
-            if (deviceId.endsWith(tagValue)) {
-              result++;
-            }
-            // double fieldValue = ((DoubleColumnVector) batch.cols[2]).vector[r];
-          } else {
-            result++;
-            // double fieldValue = ((DoubleColumnVector) batch.cols[1]).vector[r];
-          }
-        }
-      }
-      rowIterator.close();
-
-      logger.info("ORC result: {}", result);
-
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+//    // todo add type in parameter and config
+//    String schema = getReadSchema(field, Double.class);
+//    try {
+//      Reader reader = OrcFile.createReader(new Path(tagToFilePath(tagValue)),
+//          OrcFile.readerOptions(new Configuration()));
+//      TypeDescription readSchema = TypeDescription.fromString(schema);
+//
+//      VectorizedRowBatch batch = readSchema.createRowBatch();
+//      RecordReader rowIterator = reader.rows(reader.options().schema(readSchema));
+//
+//      int result = 0;
+//      while (rowIterator.nextBatch(batch)) {
+//        for (int r = 0; r < batch.size; ++r) {
+//
+//          // time, deviceId, field
+//          long t = ((LongColumnVector) batch.cols[0]).vector[r];
+//          if (t < startTime || t > endTime) {
+//            continue;
+//          }
+//
+//          if (!config.splitFileByDevice) {
+//            String deviceId = ((BytesColumnVector) batch.cols[1]).toString(r);
+//            if (deviceId.endsWith(tagValue)) {
+//              result++;
+//            }
+//            // double fieldValue = ((DoubleColumnVector) batch.cols[2]).vector[r];
+//          } else {
+//            result++;
+//            // double fieldValue = ((DoubleColumnVector) batch.cols[1]).vector[r];
+//          }
+//        }
+//      }
+//      rowIterator.close();
+//
+//      logger.info("ORC result: {}", result);
+//
+//    } catch (IOException e) {
+//      e.printStackTrace();
+//    }
 
     return System.nanoTime() - start;
   }

@@ -202,53 +202,54 @@ public class ParquetManager implements IDataBaseManager {
   }
 
   @Override
-  public long count(String tagValue, String field, long startTime, long endTime) {
-
-    Configuration conf = new Configuration();
-    if (!config.splitFileByDevice) {
-      ParquetInputFormat.setFilterPredicate(conf, and(and(gtEq(longColumn(Config.TIME_NAME), startTime),
-          ltEq(longColumn(Config.TIME_NAME), endTime)),
-          eq(binaryColumn(Config.TAG_NAME), Binary.fromString(tagValue))));
-    } else {
-      ParquetInputFormat.setFilterPredicate(conf, and(gtEq(longColumn(Config.TIME_NAME), startTime),
-          ltEq(longColumn(Config.TIME_NAME), endTime)));
-    }
-
-    FilterCompat.Filter filter = ParquetInputFormat.getFilter(conf);
-
-    Types.MessageTypeBuilder builder = Types.buildMessage();
-    builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, Config.TIME_NAME));
-    if (!config.splitFileByDevice) {
-      builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
-    }
-    // todo add field type
-    builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.DOUBLE, field));
-
-    MessageType querySchema = builder.named(schemaName);
-    conf.set(ReadSupport.PARQUET_READ_SCHEMA, querySchema.toString());
-
-    // set reader
-    ParquetReader.Builder<Group> reader= ParquetReader
-            .builder(new GroupReadSupport(), new Path(tagToFilePath(tagValue)))
-            .withConf(conf)
-            .withFilter(filter);
-
-    long start = System.nanoTime();
-
-    ParquetReader<Group> build;
-    int result = 0;
-    try {
-      build = reader.build();
-      Group line;
-      while((line=build.read())!=null) {
-        result++;
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    logger.info("Parquet result: {}", result);
-
-    return System.nanoTime() - start;
+  public long query() {
+//
+//    Configuration conf = new Configuration();
+//    if (!config.splitFileByDevice) {
+//      ParquetInputFormat.setFilterPredicate(conf, and(and(gtEq(longColumn(Config.TIME_NAME), startTime),
+//          ltEq(longColumn(Config.TIME_NAME), endTime)),
+//          eq(binaryColumn(Config.TAG_NAME), Binary.fromString(tagValue))));
+//    } else {
+//      ParquetInputFormat.setFilterPredicate(conf, and(gtEq(longColumn(Config.TIME_NAME), startTime),
+//          ltEq(longColumn(Config.TIME_NAME), endTime)));
+//    }
+//
+//    FilterCompat.Filter filter = ParquetInputFormat.getFilter(conf);
+//
+//    Types.MessageTypeBuilder builder = Types.buildMessage();
+//    builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.INT64, Config.TIME_NAME));
+//    if (!config.splitFileByDevice) {
+//      builder.addField(new PrimitiveType(Type.Repetition.REQUIRED, PrimitiveType.PrimitiveTypeName.BINARY, Config.TAG_NAME));
+//    }
+//    // todo add field type
+//    builder.addField(new PrimitiveType(Type.Repetition.OPTIONAL, PrimitiveType.PrimitiveTypeName.DOUBLE, field));
+//
+//    MessageType querySchema = builder.named(schemaName);
+//    conf.set(ReadSupport.PARQUET_READ_SCHEMA, querySchema.toString());
+//
+//    // set reader
+//    ParquetReader.Builder<Group> reader= ParquetReader
+//            .builder(new GroupReadSupport(), new Path(tagToFilePath(tagValue)))
+//            .withConf(conf)
+//            .withFilter(filter);
+//
+//    long start = System.nanoTime();
+//
+//    ParquetReader<Group> build;
+//    int result = 0;
+//    try {
+//      build = reader.build();
+//      Group line;
+//      while((line=build.read())!=null) {
+//        result++;
+//      }
+//    } catch (IOException e) {
+//      e.printStackTrace();
+//    }
+//    logger.info("Parquet result: {}", result);
+//
+//    return System.nanoTime() - start;
+    return 0;
   }
 
   @Override
