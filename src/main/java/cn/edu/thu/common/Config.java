@@ -12,6 +12,8 @@ public class Config {
   public static final String DEFAULT_TAG = "DEFAULT";
   private static Logger logger = LoggerFactory.getLogger(Config.class);
 
+  public String EXP_NAME = "myexp";
+
   // INFLUXDB, OPENTSDB, SUMMARYSTORE, WATERWHEEL, KAIROSDB, TSFILE, PARQUET, ORC
   public String DATABASE = "TSFILE";
 
@@ -54,9 +56,11 @@ public class Config {
   public String IOTDB_USERNAME = "root";
   public String IOTDB_PASSWORD = "root";
   public boolean IOTDB_ENABLE_THRIFT_COMPRESSION = false;
+  public int IOTDB_QUERY_SESSION_FETCH_SIZE = 5000;
   public String IOTDB_STORAGE_GROUP = "mysg1";
 
   public String INFLUXDB_URL = "http://127.0.0.1:8086";
+  public int INFLUXDB_QUERY_CHUNKING_SIZE = 5000;
   public String INFLUXDB_DATABASE = "mydb";
 
   public String OPENTSDB_URL = "http://127.0.0.1:4242";
@@ -71,6 +75,7 @@ public class Config {
   public int TIMESCALEDB_PORT = 5432;
   public String TIMESCALEDB_USERNAME = "postgres";
   public String TIMESCALEDB_PASSWORD = "123";
+  public long TIMESCALEDB_CHUNK_TIME_INTERVAL = 604800000000L;
   public String TIMESCALEDB_DATABASE = "mydb";
 
   public String SUMMARYSTORE_PATH = "sstore";
@@ -138,6 +143,7 @@ public class Config {
 
 
   private void load(Properties properties) {
+    EXP_NAME = properties.getOrDefault("EXP_NAME", EXP_NAME).toString();
 
     DATABASE = properties.getOrDefault("DATABASE", DATABASE).toString();
     DATA_SET = properties.getOrDefault("DATA_SET", DATA_SET).toString();
@@ -162,10 +168,16 @@ public class Config {
     IOTDB_ENABLE_THRIFT_COMPRESSION = Boolean.parseBoolean(
         properties.getOrDefault("IOTDB_ENABLE_THRIFT_COMPRESSION", IOTDB_ENABLE_THRIFT_COMPRESSION)
             .toString());
+    IOTDB_QUERY_SESSION_FETCH_SIZE = Integer.parseInt(
+        properties.getOrDefault("IOTDB_QUERY_SESSION_FETCH_SIZE", IOTDB_QUERY_SESSION_FETCH_SIZE)
+            .toString());
     IOTDB_STORAGE_GROUP = properties.getOrDefault("IOTDB_STORAGE_GROUP", IOTDB_STORAGE_GROUP)
         .toString();
 
     INFLUXDB_URL = properties.getOrDefault("INFLUXDB_URL", INFLUXDB_URL).toString();
+    INFLUXDB_QUERY_CHUNKING_SIZE = Integer.parseInt(
+        properties.getOrDefault("INFLUXDB_QUERY_CHUNKING_SIZE", INFLUXDB_QUERY_CHUNKING_SIZE)
+            .toString());
     INFLUXDB_DATABASE = properties.getOrDefault("INFLUXDB_DATABASE", INFLUXDB_DATABASE).toString();
 
     KAIROSDB_URL = properties.getOrDefault("KAIROSDB_URL", KAIROSDB_URL).toString();
@@ -182,6 +194,9 @@ public class Config {
         .toString();
     TIMESCALEDB_PASSWORD = properties.getOrDefault("TIMESCALEDB_PASSWORD", TIMESCALEDB_PASSWORD)
         .toString();
+    TIMESCALEDB_CHUNK_TIME_INTERVAL = Long.parseLong(properties
+        .getOrDefault("TIMESCALEDB_CHUNK_TIME_INTERVAL", TIMESCALEDB_CHUNK_TIME_INTERVAL)
+        .toString());
     TIMESCALEDB_DATABASE = properties.getOrDefault("TIMESCALEDB_DATABASE", TIMESCALEDB_DATABASE)
         .toString();
 

@@ -7,6 +7,7 @@ import cn.edu.thu.database.IDataBaseManager;
 import cn.edu.thu.database.influxdb.InfluxDBManager;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
 import org.slf4j.Logger;
@@ -22,7 +23,7 @@ public class TimescaleDBManager implements IDataBaseManager {
   private static final String POSTGRESQL_URL = "jdbc:postgresql://%s:%s/%s";
 
   //  private static final String tableName = "tb1";
-  private boolean tableCreated = false;
+  private boolean initialized = false;
 
   // chunk_time_interval=7d
   private static final String CONVERT_TO_HYPERTABLE =
@@ -53,7 +54,10 @@ public class TimescaleDBManager implements IDataBaseManager {
           config.TIMESCALEDB_PASSWORD);
       Statement statement = connection.createStatement();
       statement.execute(String.format("DROP DATABASE IF EXISTS %s;", config.TIMESCALEDB_DATABASE));
+      logger.info(
+          "Done: " + String.format("DROP DATABASE IF EXISTS %s;", config.TIMESCALEDB_DATABASE));
       statement.execute(String.format("CREATE database %s;", config.TIMESCALEDB_DATABASE));
+      logger.info("Done: " + String.format("CREATE database %s;", config.TIMESCALEDB_DATABASE));
       statement.close();
       connection.close();
       // next set up the TimescaleDB extension for the database
@@ -74,41 +78,134 @@ public class TimescaleDBManager implements IDataBaseManager {
 
   @Override
   public void initClient() {
-    try {
-      Class.forName(POSTGRESQL_JDBC_NAME);
-      String url = String.format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT,
-          config.TIMESCALEDB_DATABASE);
-      logger.info("connecting url: " + url);
-      connection = DriverManager.getConnection(url, config.TIMESCALEDB_USERNAME,
-          config.TIMESCALEDB_PASSWORD);
-    } catch (Exception e) {
-      logger.error("Initialize TimescaleDB failed because ", e);
-    }
   }
 
   @Override
   public long query() {
+    String[] queryInfo = generateQuery();
+    String queryURL = queryInfo[0];
+    String sql = queryInfo[1];
+    try {
+      connection = DriverManager.getConnection(queryURL, config.TIMESCALEDB_USERNAME,
+          config.TIMESCALEDB_PASSWORD);
+    } catch (Exception e) {
+      logger.error("Initialize TimescaleDB failed because ", e);
+    }
+    logger.info("connecting url: " + queryURL);
+    logger.info("Begin query: {}", sql);
 
-//    String sql;
-//
-//    if (startTime == -1 || endTime == -1) {
-//      sql = String.format(COUNT_SQL_WITHOUT_TIME, field, measurementId, Config.TAG_NAME, tagValue);
-//    } else {
-//      sql = String
-//          .format(COUNT_SQL_WITH_TIME, field, measurementId, startTime, endTime, Config.TAG_NAME,
-//              tagValue);
-//    }
-//
-//    logger.info("Executing sql {}", sql);
+    long start = 0;
+    int c = 0;
+    try (Statement statement = connection.createStatement()) {
+      start = System.nanoTime();
+      ResultSet rs = statement.executeQuery(sql);
+      while (rs.next()) {
+        c++;
+        for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+          // NOTE: Comparatively, IoTDB includes dataSet.next(). So here the process of extracting records is also included:
+          rs.getObject(i); // but will this step be skipped by compiler?
+        }
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+      logger.error("meet error when writing: {}", e.getMessage());
+    }
+    long elapsedTime = System.nanoTime() - start;
+    logger.info("Query finished. Total lines: {}. SQL: {}", c, sql);
+    return elapsedTime;
+  }
 
-    long start = System.nanoTime();
-
-//    QueryResult queryResult = influxDB.query(new Query(sql, database));
-
-//    logger.info(queryResult.toString());
-
-    return System.nanoTime() - start;
-
+  /**
+   * @return the first string denotes queryURL, the second string denotes sql
+   */
+  private String[] generateQuery() {
+    String queryURL = null;
+    String sql = null;
+    switch (config.QUERY_TYPE) {
+      case "SINGLE_SERIES_RAW_QUERY":
+        // use yanchang dataset
+        queryURL = String
+            .format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT, "yanchang");
+        sql = String.format("select %s from %s limit %d;", encapName("collecttime"),
+            encapName("root.T000100010002.90003"), config.QUERY_PARAM);
+        break;
+      case "MULTI_SERIES_ALIGN_QUERY":
+        // use dianchang dataset
+        queryURL = String
+            .format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT, "dianchang");
+        String sql_format = "select %s from %s;";
+        StringBuilder selectSensors = new StringBuilder();
+        for (int i = 1; i < config.QUERY_PARAM + 1; i++) {
+          selectSensors.append(encapName("sensor" + i));
+          if (i < config.QUERY_PARAM) {
+            selectSensors.append(",");
+          }
+        }
+        sql = String.format(sql_format, selectSensors.toString(), encapName("root.DianChang.d1"));
+        break;
+      case "SINGLE_SERIES_COUNT_QUERY":
+        // use yanchang dataset
+        queryURL = String
+            .format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT, "yanchang");
+        switch (config.QUERY_PARAM) {
+          case 1:
+            sql = String.format("select count(%s) from %s where time<=1601023212859;",
+                encapName("collecttime"), encapName("root.T000100010002.90003"));
+            break;
+          case 100:
+            sql = String.format("select count(%s) from %s where time<=1601023262692;",
+                encapName("collecttime"), encapName("root.T000100010002.90003"));
+            break;
+          case 10000:
+            sql = String.format("select count(%s) from %s where time<=1601045811969;",
+                encapName("collecttime"), encapName("root.T000100010002.90003"));
+            break;
+          case 1000000:
+            sql = String.format("select count(%s) from %s where time<=1602131946370;",
+                encapName("collecttime"), encapName("root.T000100010002.90003"));
+            break;
+          default:
+            logger.error("QUERY_PARAM not correct! Please check your configurations.");
+            break;
+        }
+        break;
+      case "SINGLE_SERIES_DOWNSAMPLING_QUERY":
+        // use yanchang dataset
+        queryURL = String
+            .format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT, "yanchang");
+        String sqlFormat = "select floor((time-%3$d)/%5$d)*%5$d+%3$d,count(%1$s) from %2$s where time>=%3$d "
+            + "and time<%4$d group by floor((time-%3$d)/%5$d);";
+        switch (config.QUERY_PARAM) { // note that the startTime is modified to align with influxdb group by time style
+          case 1:
+            sql = String
+                .format(sqlFormat, encapName("collecttime"), encapName("root.T000100010002.90003"),
+                    1601023212859L, 1602479033308L, 1);
+            break;
+          case 100:
+            sql = String
+                .format(sqlFormat, encapName("collecttime"), encapName("root.T000100010002.90003"),
+                    1601023212800L, 1602479033308L, 100);
+            break;
+          case 10000:
+            sql = String
+                .format(sqlFormat, encapName("collecttime"), encapName("root.T000100010002.90003"),
+                    1601023210000L, 1602479033308L, 10000);
+            break;
+          case 1000000:
+            sql = String
+                .format(sqlFormat, encapName("collecttime"), encapName("root.T000100010002.90003"),
+                    1601023000000L, 1602479033308L, 1000000);
+            break;
+          default:
+            logger.error("QUERY_PARAM not correct! Please check your configurations.");
+            break;
+        }
+        break;
+      default:
+        logger.error("QUERY_TYPE not correct! Please check your configurations.");
+        break;
+    }
+    return new String[]{queryURL, sql};
   }
 
   @Override
@@ -134,10 +231,11 @@ public class TimescaleDBManager implements IDataBaseManager {
       String pgsql = getCreateTableSql(schema);
       logger.info("CreateTableSQL Statement:  {}", pgsql);
       statement.execute(pgsql);
-//      logger.info(
-//          "CONVERT_TO_HYPERTABLE Statement:  {}",
-//          String.format(CONVERT_TO_HYPERTABLE, encapName(schema.getTag())));
-//      statement.execute(String.format(CONVERT_TO_HYPERTABLE, schema.getTag()));
+      String convertToHyperTable = String
+          .format("SELECT create_hypertable('%s', 'time', chunk_time_interval => %d);",
+              encapName(schema.getTag()), config.TIMESCALEDB_CHUNK_TIME_INTERVAL);
+      logger.info("CONVERT_TO_HYPERTABLE Statement:  {}", convertToHyperTable);
+      statement.execute(convertToHyperTable);
     } catch (Exception e) {
       logger.error("Can't create PG table because: {}", e.getMessage());
     }
@@ -185,9 +283,21 @@ public class TimescaleDBManager implements IDataBaseManager {
 
   @Override
   public long insertBatch(List<Record> records, Schema schema) {
-    if (!tableCreated) {
+    if (!initialized) {
+      try {
+        Class.forName(POSTGRESQL_JDBC_NAME);
+        String url = String.format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT,
+            config.TIMESCALEDB_DATABASE);
+        logger.info("connecting url: " + url);
+        connection = DriverManager.getConnection(url, config.TIMESCALEDB_USERNAME,
+            config.TIMESCALEDB_PASSWORD);
+      } catch (Exception e) {
+        logger.error("Initialize TimescaleDB failed because ", e);
+      }
+
       registerSchema(schema);
-      tableCreated = true;
+
+      initialized = true;
     }
 
     long start = 0;

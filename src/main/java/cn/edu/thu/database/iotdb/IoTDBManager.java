@@ -4,7 +4,6 @@ import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +18,6 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.utils.BitMap;
-import org.apache.iotdb.tsfile.write.record.NonAlignedTablet;
 import org.apache.iotdb.tsfile.write.record.Tablet;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.slf4j.Logger;
@@ -74,16 +72,13 @@ public class IoTDBManager implements IDataBaseManager {
 
   @Override
   public long insertBatch(List<Record> records, Schema schema) { // use insertTablet interface
-//    Tablet tablet = genTablet(records, schema); // Note this part of time is not included
-    long elapsedTime = 0;
-    try {
-      if (config.useAlignedTablet) {
-        elapsedTime = insertBatchAligned(records, session, schema);
-      } else {
-        elapsedTime = insertBatchNonAligned(records, session, schema);
-      }
-    } catch (IOException e) {
-      logger.error(e.getMessage());
+    long elapsedTime;
+    if (config.useAlignedTablet) {
+      logger.info("insert aligned tablet...");
+      elapsedTime = insertBatchAligned(records, session, schema);
+    } else {
+      logger.info("insert nonaligned tablet...");
+      elapsedTime = insertBatchNonAligned(records, session, schema);
     }
     return elapsedTime;
   }
@@ -92,17 +87,18 @@ public class IoTDBManager implements IDataBaseManager {
     Tablet tablet = convertToTablet(records, schema);
     long start = System.nanoTime();
     try {
-//      if (config.useAlignedSeries) { //TODO: whether to use this?
-//        writer.writeAligned(tablet);
-//      } else {
-//      session.insertAlignedTablet(tablet);
-      /** TODO
-       * -   **session.insertTablet(tablet) + mark denotes null: right**
-       * -   **session.insertAlignedTablet(tablet) + mark denotes null: lose data**
-       * -   **session.insertAlignedTablet(tablet) + mark denotes existent: total wrong**
-       */
+      session.insertAlignedTablet(tablet);
+    } catch (Exception e) {
+      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
+    }
+    return System.nanoTime() - start;
+  }
+
+  private long insertBatchNonAligned(List<Record> records, Session session, Schema schema) {
+    Tablet tablet = convertToTablet(records, schema);
+    long start = System.nanoTime();
+    try {
       session.insertTablet(tablet);
-//      }
     } catch (Exception e) {
       logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
     }
@@ -176,58 +172,6 @@ public class IoTDBManager implements IDataBaseManager {
     }
   }
 
-
-  private long insertBatchNonAligned(List<Record> records, Session session, Schema schema)
-      throws IOException {
-    throw new IOException("not implemented");
-//    NonAlignedTablet tablet = convertToNonAlignedTablet(records, schema);
-//    try {
-//      session.insertTablet(tablet);
-//    } catch (Exception e) {
-//      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
-//    }
-  }
-
-  private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
-      Schema schema) {
-    return null;
-  }
-
-//  private static void addToColumn(Object column, int rowIndex, Object field, BitMap bitMap,
-//      Class<?> type) {
-//    if (type == Long.class) {
-//      addToLongColumn(column, rowIndex, field, bitMap);
-//    } else if (type == Double.class) {
-//      addToDoubleColumn(column, rowIndex, field, bitMap);
-//    } else {
-//      addToTextColumn(column, rowIndex, field, bitMap);
-//    }
-//  }
-//
-//  private static void addToDoubleColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
-//    double[] sensor = (double[]) column;
-//    sensor[rowIndex] = field != null ? (double) field : Double.MIN_VALUE;
-//    if (field == null) {
-//      bitMap.mark(rowIndex);
-//    }
-//  }
-//
-//  private static void addToLongColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
-//    long[] sensor = (long[]) column;
-//    sensor[rowIndex] = field != null ? (long) field : Long.MIN_VALUE;
-//    if (field == null) {
-//      bitMap.mark(rowIndex);
-//    }
-//  }
-//
-//  private static void addToTextColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
-//    Binary[] sensor = (Binary[]) column;
-//    sensor[rowIndex] = field != null ? new Binary((String) field) : Binary.EMPTY_VALUE;
-//    if (field == null) {
-//      bitMap.mark(rowIndex);
-//    }
-//  }
-
   private static TSDataType toTsDataType(Class<?> type) {
     if (type == Long.class) {
       return TSDataType.INT64;
@@ -250,6 +194,28 @@ public class IoTDBManager implements IDataBaseManager {
 
   @Override
   public long query() {
+    String sql = generateQuery();
+    logger.info("Begin query: {}", sql);
+
+    int c = 0;
+    session.setFetchSize(config.IOTDB_QUERY_SESSION_FETCH_SIZE);
+    long start = System.nanoTime();
+    try (SessionDataSet dataSet = session.executeQueryStatement(sql)) {
+      while (dataSet.hasNext()) {
+        c++;
+        // note that the `constructRowRecordFromValueArray` step is included.
+        // but will this step be skipped by compiler?
+        dataSet.next();
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    long elapsedTime = System.nanoTime() - start;
+    logger.info("Query finished. Total lines: {}. SQL: {}", c, sql);
+    return elapsedTime;
+  }
+
+  private String generateQuery() {
     String sql = null;
     switch (config.QUERY_TYPE) {
       case "SINGLE_SERIES_RAW_QUERY":
@@ -293,16 +259,16 @@ public class IoTDBManager implements IDataBaseManager {
         // use yanchang dataset
         switch (config.QUERY_PARAM) { // note that the startTime is modified to align with influxdb group by time style
           case 1:
-            sql = "select first_value(collecttime) from root.T000100010002.90003 group by ([1601023212859, 1602479033308), 1ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023212859, 1602479033308), 1ms)";
             break;
           case 100:
-            sql = "select first_value(collecttime) from root.T000100010002.90003 group by ([1601023212800, 1602479033308), 100ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023212800, 1602479033308), 100ms)";
             break;
           case 10000:
-            sql = "select first_value(collecttime) from root.T000100010002.90003 group by ([1601023210000, 1602479033308), 10000ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023210000, 1602479033308), 10000ms)";
             break;
           case 1000000:
-            sql = "select first_value(collecttime) from root.T000100010002.90003 group by ([1601023000000, 1602479033308), 1000000ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023000000, 1602479033308), 1000000ms)";
             break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");
@@ -313,22 +279,7 @@ public class IoTDBManager implements IDataBaseManager {
         logger.error("QUERY_TYPE not correct! Please check your configurations.");
         break;
     }
-    logger.info("Begin query: {}", sql);
-
-    int c = 0;
-    long start = System.nanoTime();
-    try (SessionDataSet dataSet = session.executeQueryStatement(sql)) {
-      while (dataSet.hasNext()) {
-        dataSet.next();
-        c++;
-      }
-    } catch (Exception e) {
-      e.printStackTrace();
-    }
-    long elapsedTime = System.nanoTime() - start;
-
-    logger.info("Query {} finished. Total lines: {}", sql, c);
-    return elapsedTime;
+    return sql;
   }
 
   @Override

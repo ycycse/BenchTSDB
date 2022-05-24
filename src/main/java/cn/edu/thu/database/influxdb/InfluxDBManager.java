@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
@@ -15,6 +17,8 @@ import org.influxdb.dto.BatchPoints;
 import org.influxdb.dto.Point;
 import org.influxdb.dto.Query;
 import org.influxdb.dto.QueryResult;
+import org.influxdb.dto.QueryResult.Result;
+import org.influxdb.dto.QueryResult.Series;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,14 +37,20 @@ public class InfluxDBManager implements IDataBaseManager {
 
   public InfluxDBManager(Config config) {
     this.config = config;
+
+//    OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient().newBuilder()
+//        .connectTimeout(3600, TimeUnit.SECONDS)
+//        .readTimeout(3600, TimeUnit.SECONDS)
+//        .writeTimeout(3600, TimeUnit.SECONDS);
+
     influxDB = InfluxDBFactory.connect(config.INFLUXDB_URL);
     database = config.INFLUXDB_DATABASE;
   }
 
   @Override
   public void initServer() {
-    influxDB.query(new Query("DROP DATABASE " + database));
-    influxDB.query(new Query("CREATE DATABASE " + database));
+    influxDB.query(new Query("DROP DATABASE " + database, "_internal"));
+    influxDB.query(new Query("CREATE DATABASE " + database, "_internal"));
 //    close();
   }
 
@@ -50,19 +60,57 @@ public class InfluxDBManager implements IDataBaseManager {
 
   @Override
   public long query() {
+    // prepare sql
+    String[] queryInfo = generateQuery();
+    String queryDatabase = queryInfo[0];
+    String sql = queryInfo[1];
+    logger.info("Begin query: {}", sql);
 
-//    String sql;
-//
-//    if (startTime == -1 || endTime == -1) {
-//      sql = String.format(COUNT_SQL_WITHOUT_TIME, field, measurementId, Config.TAG_NAME, tagValue);
-//    } else {
-//      sql = String
-//          .format(COUNT_SQL_WITH_TIME, field, measurementId, startTime, endTime, Config.TAG_NAME,
-//              tagValue);
-//    }
-//
-//    logger.info("Executing sql {}", sql);
+    // begin execution
+    final BlockingQueue<QueryResult> queue = new LinkedBlockingQueue<>();
+    int cnt = 0;
+    QueryResult result;
+    long start = System.nanoTime();
+    // Use chunking query is to deal with the problem that large query results cannot fit within java heap space
+    influxDB.query(new Query(sql, queryDatabase), config.INFLUXDB_QUERY_CHUNKING_SIZE,
+        queue::add); // note influxdb chunking query is async.
+    try {
+      do {
+        result = queue.poll(20, TimeUnit.SECONDS);
+        if (result.getError() != null) {
+          break;
+        }
+        for (Result res : result.getResults()) {
+          List<Series> series = res.getSeries();
+          if (series == null) {
+            continue;
+          }
+          if (res.getError() != null) {
+            logger.error(res.getError());
+          }
+          for (Series serie : series) {
+            List<List<Object>> values = serie.getValues();
+            cnt += values.size() * (serie.getColumns().size() - 1);
+          }
+        }
+      } while (true);
+      String end = result.getError();
+      if (!end.equals(
+          "DONE")) { // "Done" is the mark of query result end. Ref: https://github.com/influxdata/influxdb-java/pull/270
+        logger.error("InfluxDB chunking query result went wrong: " + end);
+      }
+    } catch (Exception e) {
+      logger.error("error: " + e);
+    }
+    long elapsedTime = System.nanoTime() - start;
+    logger.info("Query finished. Total points: {}. SQL: {}", cnt, sql);
+    return elapsedTime;
+  }
 
+  /**
+   * @return the first string denotes queryDatabase, the second string denotes sql
+   */
+  private String[] generateQuery() {
     String sql = null;
     String queryDatabase = null;
     switch (config.QUERY_TYPE) {
@@ -111,7 +159,7 @@ public class InfluxDBManager implements IDataBaseManager {
         // use yanchang dataset
         queryDatabase = "yanchang";
         sql = String.format(
-            "select first(collecttime) from tb1 where deviceId='root.T000100010002.90003' "
+            "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' "
                 + "and time>=1601023212859000000 and time<=1602479033307000000 group by time(%dms)",
             config.QUERY_PARAM);
         break;
@@ -119,15 +167,7 @@ public class InfluxDBManager implements IDataBaseManager {
         logger.error("QUERY_TYPE not correct! Please check your configurations.");
         break;
     }
-    logger.info("Begin query: {}", sql);
-
-    long start = System.nanoTime();
-    QueryResult queryResult = influxDB.query(new Query(sql, queryDatabase));
-    long elapsedTime = System.nanoTime() - start;
-
-    logger.info("Query {} finished. Total lines: {}", sql,
-        queryResult.getResults().get(0).getSeries().get(0).getValues().size());
-    return elapsedTime;
+    return new String[]{queryDatabase, sql};
   }
 
   @Override

@@ -6,11 +6,11 @@ import cn.edu.thu.common.Schema;
 import cn.edu.thu.common.ThuHttpRequest;
 import cn.edu.thu.database.IDataBaseManager;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +33,13 @@ public class KairosDBManager implements IDataBaseManager {
     queryUrl = url + "/api/v1/datapoints/query";
     writeUrl = url + "/api/v1/datapoints";
     deleteUrl = url + "/api/v1/metric/%s";
+    if (config.KAIROSDB_BATCH_POINTS) {
+      logger.info(
+          "use batched data points API. See https://kairosdb.github.io/docs/restapi/AddDataPoints.html.");
+    } else {
+      logger.info(
+          "use single data point API. See https://kairosdb.github.io/docs/restapi/AddDataPoints.html.");
+    }
   }
 
   @Override
@@ -47,11 +54,11 @@ public class KairosDBManager implements IDataBaseManager {
 //    }
     logger.info(
         "NOTE: I don't clear existent data for KairosDB. Please you assure KairosDB is started up with brand new Cassandra.");
-    logger.info("To reset your KairosDB database to default, run something like that: "
-        + "(1) Enter Cassandra Query Language terminal by running cqlsh. "
-        + "(2) Drop kairosdb keyspace: cqlsh> DROP KEYSPACE kairosdb ; "
-        + "(3) Stopping KairosDB: sudo /opt/kairosdb/bin/kairosdb.sh stop "
-        + "(4) Running KairosDB: sudo /opt/kairosdb/bin/kairosdb.sh start ");
+//    logger.info("To reset your KairosDB database to default, run something like that: "
+//        + "(1) Enter Cassandra Query Language terminal by running cqlsh. "
+//        + "(2) Drop kairosdb keyspace: cqlsh> DROP KEYSPACE kairosdb ; "
+//        + "(3) Delete the kairosdb data directory in Cassandra."
+//        + "(4) Running a fresh new Kairosdb server. ");
   }
 
   @Override
@@ -63,6 +70,7 @@ public class KairosDBManager implements IDataBaseManager {
   public long insertBatch(List<Record> records, Schema schema) {
     List<KairosDBPoint> points;
 
+    logger.info("Begin converting records to KairosDBPoints...");
     // convert to kairosdb data points
     if (!config.KAIROSDB_BATCH_POINTS) {
       /*
@@ -88,8 +96,9 @@ public class KairosDBManager implements IDataBaseManager {
        */
       points = convertToBatchedPoints(records, schema);
     }
+    logger.info("Finish converting records to KairosDBPoints.");
 
-    String body = JSON.toJSONString(points);
+    String body = JSON.toJSONString(points, SerializerFeature.DisableCircularReferenceDetect);
 //    System.out.println(body);
 
     long start = System.nanoTime();

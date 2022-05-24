@@ -106,7 +106,8 @@ public class MainLoad {
       Thread.sleep(1000);
     }
 
-    logger.info("All done! Total records:{}, points:{}, time:{} ms, speed:{}",
+    logger.info("Exp:{} All done! Total records:{}, points:{}, time:{} ms, speed:{}",
+        config.EXP_NAME,
         statistics.recordNum,
         statistics.pointNum, (float) statistics.timeCost.get() / 1000_000F, statistics.speed());
 
