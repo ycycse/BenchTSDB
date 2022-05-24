@@ -181,90 +181,184 @@ public class KairosDBManager implements IDataBaseManager {
   @Override
   public long query() {
 
-    Map<String, Object> queryMap = new HashMap<>();
+    String json = generateQuery();
+    logger.info("Begin query：{}", json);
 
-    if (config.QUERY_START_TIME == -1 || config.QUERY_END_TIME == -1) {
-      queryMap.put(QUERY_START_TIME, 0);
-      queryMap.put(QUERY_END_TIME, Long.MAX_VALUE);
-    } else {
-      queryMap.put(QUERY_START_TIME, config.QUERY_START_TIME);
-      queryMap.put(QUERY_END_TIME, config.QUERY_END_TIME);
-    }
-
-    List<Map<String, Object>> subQueries = new ArrayList<>();
-
-    Map<String, Object> subQuery = new HashMap<>();
-    subQuery.put("name", config.QUERY_FIELD);
-
-    Map<String, List<String>> tags = new HashMap<>();
-    List<String> tagVs = new ArrayList<>();
-    tagVs.add(config.QUERY_TAG);
-    tags.put(Config.TAG_NAME, tagVs);
-    subQuery.put("tags", tags);
-
-    List<Map<String, Object>> aggregators = new ArrayList<>();
-
-    Map<String, Object> aggregator = new HashMap<>();
-    aggregator.put("name", "count");
-
-    Map<String, Object> sampling = new HashMap<>();
-    sampling.put("value", 10);
-    // “milliseconds”, “seconds”, “minutes”, “hours”, “days”, “weeks”, “months”, and “years”
-    sampling.put("unit", "seconds");
-
-    aggregator.put("sampling", sampling);
-
-    aggregators.add(aggregator);
-    subQuery.put("aggregators", aggregators);
-
-    subQueries.add(subQuery);
-
-    queryMap.put("metrics", subQueries);
-
-    String json = JSON.toJSONString(queryMap);
-
-    logger.info("sql：{}", json);
-
-//    json = "{\n"
-//        + "  \"metrics\": [\n"
-//        + "    {\n"
-//        + "      \"tags\": {\n"
-//        + "        \"deviceId\": [\n"
-//        + "          \"server2\"\n"
-//        + "        ]\n"
-//        + "      },\n"
-//        + "      \"name\": \"archive_file_search\",\n"
-//        + "      \"aggregators\": [\n"
-//        + "        {\n"
-//        + "          \"name\": \"first\",\n"
-//        + "          \"sampling\": {\n"
-//        + "            \"value\": \"1\",\n"
-//        + "            \"unit\": \"milliseconds\"\n"
-//        + "          }\n"
-////        + "          },\n"
-////        + "          \"align_sampling\": false\n"
-//        + "        }\n"
-//        + "      ]\n"
-//        + "    }\n"
-//        + "  ],\n"
-//        + "  \"plugins\": [],\n"
-//        + "  \"cache_time\": 0,\n"
-//        + "  \"time_zone\": \"Etc/GMT-8\",\n"
-//        + "  \"start_absolute\": 1651334400000,\n"
-//        + "  \"end_absolute\": 1652889600000\n"
-//        + "}";
-//    System.out.println(json);
-//    logger.info("sql：{}", json);
-
+    int resStrLen = 0;
     long start = System.nanoTime();
     try {
-      String response = ThuHttpRequest.sendPost(queryUrl, json);
-      logger.info("result: {}", response); // TODO: move this out of time measurement?
+      String res = ThuHttpRequest.sendPost(queryUrl, json);
+      resStrLen = res.length();
+      System.out.println(res);
     } catch (IOException e) {
       e.printStackTrace();
     }
+    long elapsedTime = System.nanoTime() - start;
+    logger.info("Query finished. Response json string length: {}. SQL: {}", resStrLen, json);
+    return elapsedTime;
+  }
 
-    return System.nanoTime() - start;
+  private String generateQuery() {
+    Map<String, Object> queryMap = new HashMap<>();
+    switch (config.QUERY_TYPE) {
+      case "SINGLE_SERIES_RAW_QUERY":
+        // select collecttime from root.T000100010002.90003 limit %d
+        queryMap.put(QUERY_START_TIME, 1601023212859L);
+
+        List<Map<String, Object>> subQueries = new ArrayList<>();
+        Map<String, Object> subQuery = new HashMap<>();
+        subQuery.put("name", "collecttime");
+        subQuery.put("limit", config.QUERY_PARAM);
+        Map<String, List<String>> tags = new HashMap<>();
+        List<String> tagVs = new ArrayList<>();
+        tagVs.add("root.T000100010002.90003");
+        tags.put("deviceId", tagVs);
+        subQuery.put("tags", tags);
+
+        subQueries.add(subQuery);
+        queryMap.put("metrics", subQueries);
+        break;
+      case "MULTI_SERIES_ALIGN_QUERY":
+        // select %s from root.DianChang.d1
+        queryMap.put(QUERY_START_TIME, 1577836800000L);
+
+        subQueries = new ArrayList<>();
+        for (int i = 1; i < config.QUERY_PARAM + 1; i++) {
+          subQuery = new HashMap<>();
+          subQuery.put("name", "sensor" + i);
+          tags = new HashMap<>();
+          tagVs = new ArrayList<>();
+          tagVs.add("root.DianChang.d1");
+          tags.put("deviceId", tagVs);
+          subQuery.put("tags", tags);
+
+          subQueries.add(subQuery);
+        }
+        queryMap.put("metrics", subQueries);
+        break;
+      case "SINGLE_SERIES_COUNT_QUERY":
+        // TODO: how
+        // select count(collecttime) from root.T000100010002.90003 where time<=1601023212859
+        // {
+        //  "metrics": [
+        //    {
+        //      "tags": {
+        //        "deviceId": [
+        //          "root.T000100010002.90003"
+        //        ]
+        //      },
+        //      "name": "collecttime",
+        //      "aggregators": [
+        //        {
+        //          "name": "count",
+        //          "sampling": {
+        //            "value": "100",
+        //            "unit": "years"
+        //          },
+        //          "align_sampling": true
+        //        }
+        //      ]
+        //    }
+        //  ],
+        //  "plugins": [],
+        //  "cache_time": 0,
+        //  "time_zone": "Etc/GMT-8",
+        //  "start_absolute": 1601023212000,
+        //  "end_absolute": 1601045812000
+        //}
+
+        queryMap.put(QUERY_START_TIME, 1601023212859L);
+        switch (config.QUERY_PARAM) {
+          case 1:
+            queryMap.put(QUERY_END_TIME, 1601023212859L + 1);
+            break;
+          case 100:
+            queryMap.put(QUERY_END_TIME, 1601023262692L + 1);
+            break;
+          case 10000:
+            queryMap.put(QUERY_END_TIME, 1601045811969L + 1);
+            break;
+          case 1000000:
+            queryMap.put(QUERY_END_TIME, 1602131946370L + 1);
+            break;
+          default:
+            logger.error("QUERY_PARAM not correct! Please check your configurations.");
+            break;
+        }
+
+        subQueries = new ArrayList<>();
+        subQuery = new HashMap<>();
+        subQuery.put("name", "collecttime");
+        tags = new HashMap<>();
+        tagVs = new ArrayList<>();
+        tagVs.add("root.T000100010002.90003");
+        tags.put("deviceId", tagVs);
+        subQuery.put("tags", tags);
+
+        List<Map<String, Object>> aggregators = new ArrayList<>();
+        Map<String, Object> aggregator = new HashMap<>();
+        aggregator.put("name", "count");
+        Map<String, Object> sampling = new HashMap<>();
+        sampling.put("value", 100);
+        sampling.put("unit", "years");
+        // “milliseconds”, “seconds”, “minutes”, “hours”, “days”, “weeks”, “months”, and “years”
+        aggregator.put("sampling", sampling);
+        aggregators.add(aggregator);
+        subQuery.put("aggregators", aggregators);
+
+        subQueries.add(subQuery);
+        queryMap.put("metrics", subQueries);
+        break;
+      case "SINGLE_SERIES_DOWNSAMPLING_QUERY":
+        // select count(collecttime) from root.T000100010002.90003 group by ([1601023212859, 1602479033308), 1ms)
+
+        subQueries = new ArrayList<>();
+        subQuery = new HashMap<>();
+        subQuery.put("name", "collecttime");
+        tags = new HashMap<>();
+        tagVs = new ArrayList<>();
+        tagVs.add("root.T000100010002.90003");
+        tags.put("deviceId", tagVs);
+        subQuery.put("tags", tags);
+
+        aggregators = new ArrayList<>();
+        aggregator = new HashMap<>();
+        aggregator.put("name", "count");
+        aggregator.put("align_start_time", true);
+        sampling = new HashMap<>();
+        sampling.put("value", config.QUERY_PARAM);
+        sampling.put("unit", "milliseconds");
+        // “milliseconds”, “seconds”, “minutes”, “hours”, “days”, “weeks”, “months”, and “years”
+        aggregator.put("sampling", sampling);
+        aggregators.add(aggregator);
+        subQuery.put("aggregators", aggregators);
+
+        switch (config.QUERY_PARAM) { // note that the startTime is modified to align with influxdb group by time style
+          case 1:
+            queryMap.put(QUERY_START_TIME, 1601023212859L);
+            break;
+          case 100:
+            queryMap.put(QUERY_START_TIME, 1601023212800L);
+            break;
+          case 10000:
+            queryMap.put(QUERY_START_TIME, 1601023210000L);
+            break;
+          case 1000000:
+            queryMap.put(QUERY_START_TIME, 1601023000000L);
+            break;
+          default:
+            logger.error("QUERY_PARAM not correct! Please check your configurations.");
+            break;
+        }
+        subQueries.add(subQuery);
+        queryMap.put("metrics", subQueries);
+        break;
+      default:
+        logger.error("QUERY_TYPE not correct! Please check your configurations.");
+        break;
+    }
+
+    return JSON.toJSONString(queryMap);
   }
 
   @Override
