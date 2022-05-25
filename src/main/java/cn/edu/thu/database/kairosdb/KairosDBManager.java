@@ -99,7 +99,6 @@ public class KairosDBManager implements IDataBaseManager {
     logger.info("Finish converting records to KairosDBPoints.");
 
     String body = JSON.toJSONString(points, SerializerFeature.DisableCircularReferenceDetect);
-//    System.out.println(body);
 
     long start = System.nanoTime();
 //    String response = null;
@@ -189,7 +188,6 @@ public class KairosDBManager implements IDataBaseManager {
     try {
       String res = ThuHttpRequest.sendPost(queryUrl, json);
       resStrLen = res.length();
-      System.out.println(res);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -237,36 +235,7 @@ public class KairosDBManager implements IDataBaseManager {
         queryMap.put("metrics", subQueries);
         break;
       case "SINGLE_SERIES_COUNT_QUERY":
-        // TODO: how
         // select count(collecttime) from root.T000100010002.90003 where time<=1601023212859
-        // {
-        //  "metrics": [
-        //    {
-        //      "tags": {
-        //        "deviceId": [
-        //          "root.T000100010002.90003"
-        //        ]
-        //      },
-        //      "name": "collecttime",
-        //      "aggregators": [
-        //        {
-        //          "name": "count",
-        //          "sampling": {
-        //            "value": "100",
-        //            "unit": "years"
-        //          },
-        //          "align_sampling": true
-        //        }
-        //      ]
-        //    }
-        //  ],
-        //  "plugins": [],
-        //  "cache_time": 0,
-        //  "time_zone": "Etc/GMT-8",
-        //  "start_absolute": 1601023212000,
-        //  "end_absolute": 1601045812000
-        //}
-
         queryMap.put(QUERY_START_TIME, 1601023212859L);
         switch (config.QUERY_PARAM) {
           case 1:

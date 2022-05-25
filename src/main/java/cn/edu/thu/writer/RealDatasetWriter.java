@@ -74,6 +74,9 @@ public class RealDatasetWriter implements Runnable {
         statistics.recordNum.addAndGet(batch.size());
         statistics.pointNum.addAndGet(batch.size() * reader.getCurrentSchema().getFields().length);
         logger.info("batch size: " + batch.size());
+        logger.info("Exp:{} ING. Current records:{}, points:{}, time:{} ms, speed:{}",
+            config.EXP_NAME, statistics.recordNum, statistics.pointNum,
+            (float) statistics.timeCost.get() / 1000_000F, statistics.speed());
       }
 
       statistics.timeCost.addAndGet(database.flush());
