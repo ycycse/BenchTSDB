@@ -98,9 +98,10 @@ public class CSVReader extends BasicReader {
     String line;
     List<Integer> indexToRemove = new ArrayList<>();
     int numRead = 0;
-    while ((line = reader.readLine()) != null
+    while (++numRead <= config.INFER_TYPE_MAX_RECORD_NUM
         && !unknownTypeIndices.isEmpty()
-        && ++numRead <= config.INFER_TYPE_MAX_RECORD_NUM) {
+        && (line = reader.readLine())
+        != null) { // note the sequence, make this command the last to avoid miss the line
       String[] lineSplit = line.split(config.CSV_SEPARATOR);
       indexToRemove.clear();
 
@@ -314,6 +315,10 @@ public class CSVReader extends BasicReader {
 
       fields.add(parseField(split[i], currentFileSchema, i - 1));
     }
+    for (int i = split.length; i <= currentFileSchema.getFields().length; i++) {
+      fields.add(null); // this is for tianyuan dataset, where data may be less than schema fields
+    }
+
     return fields;
   }
 

@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
-import org.apache.iotdb.rpc.StatementExecutionException;
 import org.apache.iotdb.session.Session;
 import org.apache.iotdb.session.SessionDataSet;
 import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
@@ -43,18 +42,22 @@ public class IoTDBManager implements IDataBaseManager {
 
   @Override
   public void initServer() {
-    try {
-      if (config.IOTDB_ENABLE_THRIFT_COMPRESSION) {
-        session.open(true);
-      } else {
-        session.open();
-      }
-      session.deleteStorageGroup(config.IOTDB_STORAGE_GROUP);
-      session.setStorageGroup(config.IOTDB_STORAGE_GROUP);
-      session.close();
-    } catch (StatementExecutionException | IoTDBConnectionException e) {
-      logger.error("Failed to add session", e);
-    }
+//    try {
+//      if (config.IOTDB_ENABLE_THRIFT_COMPRESSION) {
+//        session.open(true);
+//      } else {
+//        session.open();
+//      }
+//      session.deleteStorageGroup(config.IOTDB_STORAGE_GROUP);
+//      session.setStorageGroup(config.IOTDB_STORAGE_GROUP);
+//      session.close();
+//    } catch (StatementExecutionException | IoTDBConnectionException e) {
+//      logger.error("Failed to add session", e);
+//    }
+    logger
+        .info("I didn't clear the storage group because some datasets have multiple storage groups "
+            + "that cannot be predetermined. So you be careful when performing experiments: not deleting "
+            + "useful data while keep testing space clean.");
   }
 
   @Override
