@@ -110,7 +110,10 @@ public class CSVReader extends BasicReader {
           continue;
         }
 
-        String field = removeQuote(lineSplit[unknownTypeIndex + 1]);
+//        String field = removeQuote(lineSplit[unknownTypeIndex + 1]);
+        //TODO: do not remove quote, otherwise string may be wrongly inferred as long
+        String field = lineSplit[unknownTypeIndex + 1];
+
         Class<?> aClass = inferType(field);
         if (aClass != null) {
           schema.getTypes()[unknownTypeIndex] = aClass;
@@ -311,7 +314,8 @@ public class CSVReader extends BasicReader {
   private List<Object> fieldsWithCurrentFileSchema(String[] split) {
     List<Object> fields = new ArrayList<>(currentFileSchema.getFields().length);
     for (int i = 1; i < split.length; i++) {
-      split[i] = removeQuote(split[i]);
+//      split[i] = removeQuote(split[i]);
+      //TODO: do not remove quote, otherwise string may be wrongly inferred as long
 
       fields.add(parseField(split[i], currentFileSchema, i - 1));
     }
