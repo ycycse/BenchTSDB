@@ -23,7 +23,7 @@ public class TimescaleDBManager implements IDataBaseManager {
   private static final String POSTGRESQL_URL = "jdbc:postgresql://%s:%s/%s";
 
   //  private static final String tableName = "tb1";
-  private boolean initialized = false;
+  private static String currentTagTable = null;
 
   // chunk_time_interval=7d
   private static final String CONVERT_TO_HYPERTABLE =
@@ -78,6 +78,16 @@ public class TimescaleDBManager implements IDataBaseManager {
 
   @Override
   public void initClient() {
+    try {
+      Class.forName(POSTGRESQL_JDBC_NAME);
+      String url = String.format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT,
+          config.TIMESCALEDB_DATABASE);
+      logger.info("connecting url: " + url);
+      connection = DriverManager.getConnection(url, config.TIMESCALEDB_USERNAME,
+          config.TIMESCALEDB_PASSWORD);
+    } catch (Exception e) {
+      logger.error("Initialize TimescaleDB failed because ", e);
+    }
   }
 
   @Override
@@ -247,6 +257,7 @@ public class TimescaleDBManager implements IDataBaseManager {
     try (Statement statement = connection.createStatement()) {
       String pgsql = getCreateTableSql(schema);
       logger.info("CreateTableSQL Statement:  {}", pgsql);
+      // Can't create PG table because: 错误: 表最多可以有 1600 个字段
       statement.execute(pgsql);
       String convertToHyperTable = String
           .format("SELECT create_hypertable('%s', 'time', chunk_time_interval => %d);",
@@ -300,21 +311,9 @@ public class TimescaleDBManager implements IDataBaseManager {
 
   @Override
   public long insertBatch(List<Record> records, Schema schema) {
-    if (!initialized) {
-      try {
-        Class.forName(POSTGRESQL_JDBC_NAME);
-        String url = String.format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT,
-            config.TIMESCALEDB_DATABASE);
-        logger.info("connecting url: " + url);
-        connection = DriverManager.getConnection(url, config.TIMESCALEDB_USERNAME,
-            config.TIMESCALEDB_PASSWORD);
-      } catch (Exception e) {
-        logger.error("Initialize TimescaleDB failed because ", e);
-      }
-
+    if (currentTagTable == null || !currentTagTable.equals(schema.getTag())) {
       registerSchema(schema);
-
-      initialized = true;
+      currentTagTable = schema.getTag();
     }
 
     long start = 0;
