@@ -4,7 +4,6 @@ import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
-import cn.edu.thu.database.influxdb.InfluxDBManager;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -15,7 +14,7 @@ import org.slf4j.LoggerFactory;
 
 public class TimescaleDBManager implements IDataBaseManager {
 
-  private static Logger logger = LoggerFactory.getLogger(InfluxDBManager.class);
+  private static Logger logger = LoggerFactory.getLogger(TimescaleDBManager.class);
   private static final String defaultDatabase = "postgres";
   private Config config;
 
@@ -23,7 +22,10 @@ public class TimescaleDBManager implements IDataBaseManager {
   private static final String POSTGRESQL_URL = "jdbc:postgresql://%s:%s/%s";
 
   //  private static final String tableName = "tb1";
-  private static String currentTagTable = null;
+  private String currentTagTable = null; // NOTE: 不要设置为static，因为逻辑不可以被多个线程共同修改
+
+//  private static final int fieldLimit = 1599; // PG表最多可以有 1600 个字段，time占去一个
+  private static final int fieldLimit = 700; // PG表最多可以有 1600 个字段，time占去一个。同时PG还有一行的大小限制，不能超过8160.
 
   // chunk_time_interval=7d
   private static final String CONVERT_TO_HYPERTABLE =
@@ -254,45 +256,53 @@ public class TimescaleDBManager implements IDataBaseManager {
   }
 
   private void registerSchema(Schema schema) {
+    // TODO: Can't create PG table because: 错误: 表最多可以有 1600 个字段
     try (Statement statement = connection.createStatement()) {
-      String pgsql = getCreateTableSql(schema);
-      logger.info("CreateTableSQL Statement:  {}", pgsql);
-      // Can't create PG table because: 错误: 表最多可以有 1600 个字段
-      statement.execute(pgsql);
-      String convertToHyperTable = String
-          .format("SELECT create_hypertable('%s', 'time', chunk_time_interval => %d);",
-              encapName(schema.getTag()), config.TIMESCALEDB_CHUNK_TIME_INTERVAL);
-      logger.info("CONVERT_TO_HYPERTABLE Statement:  {}", convertToHyperTable);
-      statement.execute(convertToHyperTable);
+      String[] pgsql = getCreateTableSql(schema);
+      logger.info("Create {} tables...", pgsql.length);
+      for (int i = 1; i <= pgsql.length; i++) {
+        String sql = pgsql[i - 1];
+        logger.info("CreateTableSQL Statement:  {}", sql);
+        statement.execute(sql);
+        String convertToHyperTable = String
+            .format("SELECT create_hypertable('%s', 'time', chunk_time_interval => %d);",
+                encapName(tagOneToMore(schema.getTag(), i)), // note start from 1
+                config.TIMESCALEDB_CHUNK_TIME_INTERVAL);
+        logger.info("CONVERT_TO_HYPERTABLE Statement:  {}", convertToHyperTable);
+        statement.execute(convertToHyperTable);
+      }
     } catch (Exception e) {
       logger.error("Can't create PG table because: {}", e.getMessage());
     }
   }
 
-  private String getCreateTableSql(Schema schema) {
-    StringBuilder sqlBuilder = new StringBuilder("CREATE TABLE ")
-        .append(encapName(schema.getTag()))
-        .append(" (");
-    sqlBuilder
-        .append("time BIGINT NOT NULL"); // TODO: 因为这个数据库要求先注册表格schema，所以不再所有设备一张表格了，而是一个设备一张表方便一些
-//    sqlBuilder.append("time BIGINT NOT NULL, device TEXT NOT NULL");
-//    for (Map.Entry<String, String> pair : config.getDEVICE_TAGS().entrySet()) {
-//      sqlBuilder.append(", ").append(pair.getKey()).append(" TEXT NOT NULL");
-//    }
-    for (int i = 0; i < schema.getFields().length; i++) {
-      sqlBuilder
-          .append(", ")
-          .append(encapName(schema.getFields()[i]))
-          .append(" ")
-          .append(typeMap(schema.getTypes()[i]))
-          .append(" NULL ");
+  private String tagOneToMore(String tag, int n) {
+    return tag + "_" + n;
+  }
+
+  private String[] getCreateTableSql(Schema schema) {
+    // TODO: Can't create PG table because: 错误: 表最多可以有 1600 个字段
+    int splitNum = (int) Math.ceil(schema.getFields().length * 1.0 / fieldLimit);
+    String[] sqls = new String[splitNum];
+    for (int n = 1; n <= splitNum; n++) {
+      String tableName = encapName(tagOneToMore(schema.getTag(), n)); // note start from 1
+      StringBuilder sqlBuilder = new StringBuilder("CREATE TABLE ")
+          .append(tableName)
+          .append(" (");
+      sqlBuilder.append("time BIGINT NOT NULL");
+      for (int i = (n - 1) * fieldLimit; i < Math.min(schema.getFields().length, n * fieldLimit);
+          i++) {
+        sqlBuilder
+            .append(", ")
+            .append(encapName(schema.getFields()[i]))
+            .append(" ")
+            .append(typeMap(schema.getTypes()[i]))
+            .append(" NULL ");
+      }
+      sqlBuilder.append(");");
+      sqls[n - 1] = sqlBuilder.toString();
     }
-//    sqlBuilder.append(",UNIQUE (time, sGroup, device");
-//    for (Map.Entry<String, String> pair : config.getDEVICE_TAGS().entrySet()) {
-//      sqlBuilder.append(", ").append(pair.getKey());
-//    }
-    sqlBuilder.append(");");
-    return sqlBuilder.toString();
+    return sqls;
   }
 
   private String typeMap(Class<?> sensorType) {
@@ -311,17 +321,20 @@ public class TimescaleDBManager implements IDataBaseManager {
 
   @Override
   public long insertBatch(List<Record> records, Schema schema) {
+    // TODO: Can't create PG table because: 错误: 表最多可以有 1600 个字段
     if (currentTagTable == null || !currentTagTable.equals(schema.getTag())) {
-      registerSchema(schema);
       currentTagTable = schema.getTag();
+      registerSchema(schema);
     }
 
     long start = 0;
     try (Statement statement = connection.createStatement()) {
       for (Record record : records) {
-        String sql = getInsertOneBatchSql(schema, record.timestamp, record.fields);
-        statement.addBatch(sql);
-        logger.debug(sql);
+        String[] sqls = getInsertOneBatchSql(schema, record.timestamp, record.fields);
+        for (String sql : sqls) {
+          statement.addBatch(sql);
+          logger.debug(sql);
+        }
       }
       start = System.nanoTime();
       statement.executeBatch();
@@ -342,43 +355,37 @@ public class TimescaleDBManager implements IDataBaseManager {
    * <p>INSERT INTO conditions(time, group, device, s_0, s_1) VALUES (1535558400000, 'group_0',
    * 'd_0', 70.0, 50.0);
    */
-  private String getInsertOneBatchSql(Schema schema, long timestamp, List<Object> values) {
-    StringBuilder builder = new StringBuilder();
-    builder.append("insert into ").append(encapName(schema.getTag())).append("(time");
-//    builder.append("insert into ").append(tableName).append("(time,device");
-    for (String sensor : schema.getFields()) {
-      builder.append(",").append(encapName(sensor));
-    }
-    builder.append(") values(");
-    builder.append(timestamp);
-//    builder.append(",'").append(schema.getTag()).append("'");
-    for (int i = 0; i < values.size(); i++) {
-      Object value = values.get(i);
-      if (schema.getTypes()[i] == String.class && value != null) {
-        builder.append(",'").append(value).append("'");
-        // NOTE that quotes are removed during converting lines to records, so here need to be added for string type in TimescaleDB.
-        // And if quotes are not removed during converting lines to records, 'abc' will be ''abc'' here, which is wrong format.
-      } else {
-        builder.append(",").append(value);
+  private String[] getInsertOneBatchSql(Schema schema, long timestamp, List<Object> values) {
+    int splitNum = (int) Math.ceil(schema.getFields().length * 1.0 / fieldLimit);
+    String[] sqls = new String[splitNum];
+    for (int n = 1; n <= splitNum; n++) {
+      StringBuilder builder_schema = new StringBuilder();
+      StringBuilder builder_value = new StringBuilder();
+      StringBuilder builder_all = new StringBuilder();
+      builder_all.append("insert into ")
+          .append(encapName(
+              tagOneToMore(schema.getTag(), n))) // note table name add suffix start from 1
+          .append("(time");
+      for (int i = (n - 1) * fieldLimit; i < Math.min(schema.getFields().length, n * fieldLimit);
+          i++) {
+        builder_schema.append(",").append(encapName(schema.getFields()[i]));
+
+        Object value = values.get(i);
+        if (schema.getTypes()[i] == String.class && value != null) {
+          builder_value.append(",'").append(value).append("'");
+          // NOTE that quotes are removed during converting lines to records, so here need to be added for string type in TimescaleDB.
+          // And if quotes are not removed during converting lines to records, 'abc' will be ''abc'' here, which is wrong format.
+        } else {
+          builder_value.append(",").append(value);
+        }
       }
+      builder_all.append(builder_schema.toString());
+      builder_all.append(") values(");
+      builder_all.append(timestamp);
+      builder_all.append(builder_value.toString());
+      builder_all.append(");");
+      sqls[n - 1] = builder_all.toString();
     }
-    builder.append(");");
-//    builder.append(") ON CONFLICT(time,sGroup,device");
-//    for (Map.Entry<String, String> pair : deviceSchema.getTags().entrySet()) {
-//      builder.append(", ").append(pair.getKey());
-//    }
-//    builder.append(") DO UPDATE SET ");
-//    builder.append(sensors.get(0).getName()).append("=excluded.").append(sensors.get(0).getName());
-//    for (int i = 1; i < sensors.size(); i++) {
-//      builder
-//          .append(",")
-//          .append(sensors.get(i).getName())
-//          .append("=excluded.")
-//          .append(sensors.get(i).getName());
-//    }
-//    if (!config.isIS_QUIET_MODE()) {
-//      LOGGER.debug("getInsertOneBatchSql: {}", builder);
-//    }
-    return builder.toString();
+    return sqls;
   }
 }

@@ -40,7 +40,7 @@ public class Config {
   public boolean splitFileByDevice = true;
 
   public int THREAD_NUM = 1;
-  public int BATCH_SIZE = 500;
+  public int BATCH_SIZE = 1000;
   public int INFER_TYPE_MAX_RECORD_NUM = 10;
 
   public String CSV_SEPARATOR = ",";
@@ -272,6 +272,10 @@ public class Config {
     } else {
       QUERY_END_TIME = Long.parseLong(endTime);
     }
+
+    INFER_TYPE_MAX_RECORD_NUM =
+        Math.min(INFER_TYPE_MAX_RECORD_NUM,
+            BATCH_SIZE); // because the batch for inferring data type will also be batched written out
 
   }
 }
