@@ -15,6 +15,7 @@ import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.iotdb.tsfile.read.common.RowRecord;
 import org.apache.iotdb.tsfile.utils.Binary;
 import org.apache.iotdb.tsfile.utils.BitMap;
 import org.apache.iotdb.tsfile.write.record.Tablet;
@@ -202,18 +203,36 @@ public class IoTDBManager implements IDataBaseManager {
 
     int c = 0;
     session.setFetchSize(config.IOTDB_QUERY_SESSION_FETCH_SIZE);
-    long start = System.nanoTime();
-    try (SessionDataSet dataSet = session.executeQueryStatement(sql)) {
-      while (dataSet.hasNext()) {
-        c++;
-        // note that the `constructRowRecordFromValueArray` step is included.
-        // but will this step be skipped by compiler?
-        dataSet.next();
+    long start = 0;
+    long elapsedTime = 0;
+    if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
+      start = System.nanoTime();
+      try (SessionDataSet dataSet = session.executeQueryStatement(sql)) {
+        while (dataSet.hasNext()) {
+          c++;
+          // note that the `constructRowRecordFromValueArray` step is included.
+          // but will this step be skipped by compiler?
+          dataSet.next();
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
       }
-    } catch (Exception e) {
-      e.printStackTrace();
+      elapsedTime = System.nanoTime() - start;
+    } else {
+      start = System.nanoTime();
+      try (SessionDataSet dataSet = session.executeQueryStatement(sql)) {
+        while (dataSet.hasNext()) {
+          c++;
+          // note that the `constructRowRecordFromValueArray` step is included.
+          // but will this step be skipped by compiler?
+          RowRecord rowRecord = dataSet.next();
+          logger.info(rowRecord.toString());
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+      elapsedTime = System.nanoTime() - start;
     }
-    long elapsedTime = System.nanoTime() - start;
     logger.info("Query finished. Total lines: {}. SQL: {}", c, sql);
     return elapsedTime;
   }

@@ -70,39 +70,78 @@ public class InfluxDBManager implements IDataBaseManager {
     final BlockingQueue<QueryResult> queue = new LinkedBlockingQueue<>();
     int cnt = 0;
     QueryResult result;
-    long start = System.nanoTime();
-    // Use chunking query is to deal with the problem that large query results cannot fit within java heap space
-    influxDB.query(new Query(sql, queryDatabase), config.INFLUXDB_QUERY_CHUNKING_SIZE,
-        queue::add); // note influxdb chunking query is async.
-    try {
-      do {
-        result = queue.poll(20, TimeUnit.SECONDS);
-        if (result.getError() != null) {
-          break;
+    long start = 0;
+    long elapsedTime = 0;
+    if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
+      start = System.nanoTime();
+      // Use chunking query is to deal with the problem that large query results cannot fit within java heap space
+      influxDB.query(new Query(sql, queryDatabase), config.INFLUXDB_QUERY_CHUNKING_SIZE,
+          queue::add); // note influxdb chunking query is async.
+      try {
+        do {
+          result = queue.poll(20, TimeUnit.SECONDS);
+          if (result.getError() != null) {
+            break;
+          }
+          for (Result res : result.getResults()) {
+            List<Series> series = res.getSeries();
+            if (series == null) {
+              continue;
+            }
+            if (res.getError() != null) {
+              logger.error(res.getError());
+            }
+            for (Series serie : series) {
+              List<List<Object>> values = serie.getValues();
+              cnt += values.size() * (serie.getColumns().size() - 1);
+            }
+          }
+        } while (true);
+        String end = result.getError();
+        if (!end.equals(
+            "DONE")) { // "Done" is the mark of query result end. Ref: https://github.com/influxdata/influxdb-java/pull/270
+          logger.error("InfluxDB chunking query result went wrong: " + end);
         }
-        for (Result res : result.getResults()) {
-          List<Series> series = res.getSeries();
-          if (series == null) {
-            continue;
-          }
-          if (res.getError() != null) {
-            logger.error(res.getError());
-          }
-          for (Series serie : series) {
-            List<List<Object>> values = serie.getValues();
-            cnt += values.size() * (serie.getColumns().size() - 1);
-          }
-        }
-      } while (true);
-      String end = result.getError();
-      if (!end.equals(
-          "DONE")) { // "Done" is the mark of query result end. Ref: https://github.com/influxdata/influxdb-java/pull/270
-        logger.error("InfluxDB chunking query result went wrong: " + end);
+      } catch (Exception e) {
+        logger.error("error: " + e);
       }
-    } catch (Exception e) {
-      logger.error("error: " + e);
+      elapsedTime = System.nanoTime() - start;
+    } else {
+      start = System.nanoTime();
+      // Use chunking query is to deal with the problem that large query results cannot fit within java heap space
+      influxDB.query(new Query(sql, queryDatabase), config.INFLUXDB_QUERY_CHUNKING_SIZE,
+          queue::add); // note influxdb chunking query is async.
+      try {
+        do {
+          result = queue.poll(20, TimeUnit.SECONDS);
+          if (result.getError() != null) {
+            break;
+          }
+          for (Result res : result.getResults()) {
+            List<Series> series = res.getSeries();
+            if (series == null) {
+              continue;
+            }
+            if (res.getError() != null) {
+              logger.error(res.getError());
+            }
+            for (Series serie : series) {
+              List<List<Object>> values = serie.getValues();
+              cnt += values.size() * (serie.getColumns().size() - 1);
+            }
+            logger.info(res.toString());
+          }
+        } while (true);
+        String end = result.getError();
+        if (!end.equals(
+            "DONE")) { // "Done" is the mark of query result end. Ref: https://github.com/influxdata/influxdb-java/pull/270
+          logger.error("InfluxDB chunking query result went wrong: " + end);
+        }
+      } catch (Exception e) {
+        logger.error("error: " + e);
+      }
+      elapsedTime = System.nanoTime() - start;
     }
-    long elapsedTime = System.nanoTime() - start;
     logger.info("Query finished. Total points: {}. SQL: {}", cnt, sql);
     return elapsedTime;
   }

@@ -95,22 +95,38 @@ public class TimescaleDBManager implements IDataBaseManager {
     logger.info("Begin query: {}", sql);
 
     long start = 0;
+    long elapsedTime = 0;
     int c = 0;
     try (Statement statement = connection.createStatement()) {
-      start = System.nanoTime();
-      ResultSet rs = statement.executeQuery(sql);
-      while (rs.next()) {
-        c++;
-        for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-          // NOTE: Comparatively, IoTDB includes dataSet.next(). So here the process of extracting records is also included:
-          rs.getObject(i); // but will this step be skipped by compiler?
+      if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
+        start = System.nanoTime();
+        ResultSet rs = statement.executeQuery(sql);
+        while (rs.next()) {
+          c++;
+          for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+            // NOTE: Comparatively, IoTDB includes dataSet.next(). So here the process of extracting records is also included:
+            rs.getObject(i); // but will this step be skipped by compiler?
+          }
         }
+        elapsedTime = System.nanoTime() - start;
+      } else {
+        start = System.nanoTime();
+        ResultSet rs = statement.executeQuery(sql);
+        while (rs.next()) {
+          c++;
+          StringBuilder line = new StringBuilder();
+          for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+            line.append(rs.getObject(i));
+            line.append(",");
+          }
+          logger.info(line.toString());
+        }
+        elapsedTime = System.nanoTime() - start;
       }
     } catch (Exception e) {
       e.printStackTrace();
       logger.error("meet error when writing: {}", e.getMessage());
     }
-    long elapsedTime = System.nanoTime() - start;
     logger.info("Query finished. Total lines: {}. SQL: {}", c, sql);
     return elapsedTime;
   }
@@ -173,8 +189,9 @@ public class TimescaleDBManager implements IDataBaseManager {
         // use yanchang dataset
         queryURL = String
             .format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT, "yanchang");
-        String sqlFormat = "select floor((time-%3$d)/%5$d)*%5$d+%3$d,count(%1$s) from %2$s where time>=%3$d "
-            + "and time<%4$d group by floor((time-%3$d)/%5$d);";
+        String sqlFormat =
+            "select floor((time-%3$d)/%5$d)*%5$d+%3$d,count(%1$s) from %2$s where time>=%3$d "
+                + "and time<%4$d group by floor((time-%3$d)/%5$d);";
         switch (config.QUERY_PARAM) { // note that the startTime is modified to align with influxdb group by time style
           case 1:
             sql = String
@@ -340,6 +357,8 @@ public class TimescaleDBManager implements IDataBaseManager {
       Object value = values.get(i);
       if (schema.getTypes()[i] == String.class && value != null) {
         builder.append(",'").append(value).append("'");
+        // NOTE that quotes are removed during converting lines to records, so here need to be added for string type in TimescaleDB.
+        // And if quotes are not removed during converting lines to records, 'abc' will be ''abc'' here, which is wrong format.
       } else {
         builder.append(",").append(value);
       }

@@ -95,6 +95,7 @@ public class Config {
 
   public String QUERY_TYPE = "SINGLE_SERIES_RAW_QUERY";
   public int QUERY_PARAM = 1;
+  public boolean QUERY_RESULT_PRINT_FOR_DEBUG = false;
 
   private static int sensorNum_for_MULTI_SERIES_ALIGN_QUERY = 1000;
   public String[] sensorArray_for_MULTI_SERIES_ALIGN_QUERY = new String[sensorNum_for_MULTI_SERIES_ALIGN_QUERY];
@@ -245,6 +246,9 @@ public class Config {
 
     QUERY_TYPE = properties.getOrDefault("QUERY_TYPE", QUERY_TYPE).toString();
     QUERY_PARAM = Integer.parseInt(properties.getOrDefault("QUERY_PARAM", QUERY_PARAM).toString());
+    QUERY_RESULT_PRINT_FOR_DEBUG = Boolean.parseBoolean(
+        properties.getOrDefault("QUERY_RESULT_PRINT_FOR_DEBUG", QUERY_RESULT_PRINT_FOR_DEBUG)
+            .toString());
 
     for (int i = 1; i < sensorNum_for_MULTI_SERIES_ALIGN_QUERY + 1; i++) {
       sensorArray_for_MULTI_SERIES_ALIGN_QUERY[i - 1] = "sensor" + i; // for dianchang dataset

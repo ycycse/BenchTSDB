@@ -185,14 +185,28 @@ public class KairosDBManager implements IDataBaseManager {
     logger.info("Begin query：{}", json);
 
     int resStrLen = 0;
-    long start = System.nanoTime();
-    try {
-      String res = ThuHttpRequest.sendPost(queryUrl, json);
-      resStrLen = res.length();
-    } catch (IOException e) {
-      e.printStackTrace();
+    long start = 0;
+    long elapsedTime = 0;
+    if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
+      start = System.nanoTime();
+      try {
+        String res = ThuHttpRequest.sendPost(queryUrl, json);
+        resStrLen = res.length();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      elapsedTime = System.nanoTime() - start;
+    } else {
+      start = System.nanoTime();
+      try {
+        String res = ThuHttpRequest.sendPost(queryUrl, json);
+        resStrLen = res.length();
+        logger.info(res);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      elapsedTime = System.nanoTime() - start;
     }
-    long elapsedTime = System.nanoTime() - start;
     logger.info("Query finished. Response json string length: {}. SQL: {}", resStrLen, json);
     return elapsedTime;
   }

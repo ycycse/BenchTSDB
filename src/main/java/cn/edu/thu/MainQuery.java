@@ -33,7 +33,9 @@ public class MainQuery {
     database.initClient();
 
     long elapsedTime = database.query();
-    logger.info("Exp:{} done! query time: {} ms", config.EXP_NAME, (float) elapsedTime / 1000_000F);
+    logger
+        .info("Exp:{} done! Query Param:{}. query time: {} ms", config.EXP_NAME, config.QUERY_PARAM,
+            (float) elapsedTime / 1000_000F);
 
     database.close();
   }
