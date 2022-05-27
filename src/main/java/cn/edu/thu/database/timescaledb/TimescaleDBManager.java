@@ -372,8 +372,13 @@ public class TimescaleDBManager implements IDataBaseManager {
 
         Object value = values.get(i);
         if (schema.getTypes()[i] == String.class && value != null) {
+          // this is for replacing inner single quotes with double quotes
+          // for example: '{'La':0.0,'Lo':0.0,'Satellite':0,'Speed':0,'Direction':0,'GSMSignal':255}'
+          // the outer single quotes are removed while the inner is still there like 'La'
+          value = ((String)value).replace('\'','\"');
+
           builder_value.append(",'").append(value).append("'");
-          // NOTE that quotes are removed during converting lines to records, so here need to be added for string type in TimescaleDB.
+          // NOTE that outer quotes are removed during converting lines to records, so here need to be added for string type in TimescaleDB.
           // And if quotes are not removed during converting lines to records, 'abc' will be ''abc'' here, which is wrong format.
         } else {
           builder_value.append(",").append(value);

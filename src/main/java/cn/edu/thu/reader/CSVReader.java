@@ -110,7 +110,7 @@ public class CSVReader extends BasicReader {
           continue;
         }
 
-//        String field = removeQuote(lineSplit[unknownTypeIndex + 1]);
+//        String field = removeOuterQuote(lineSplit[unknownTypeIndex + 1]);
         //TODO: do not remove quote, otherwise string may be wrongly inferred as long
         String field = lineSplit[unknownTypeIndex + 1];
 
@@ -287,7 +287,7 @@ public class CSVReader extends BasicReader {
     return records;
   }
 
-  private String removeQuote(String s) {
+  private String removeOuterQuote(String s) {
     if (s.length() >= 2 &&
         s.startsWith("'") && s.endsWith("'") ||
         s.startsWith("\"") && s.endsWith("\"")) {
@@ -314,7 +314,7 @@ public class CSVReader extends BasicReader {
   private List<Object> fieldsWithCurrentFileSchema(String[] split) {
     List<Object> fields = new ArrayList<>(currentFileSchema.getFields().length);
     for (int i = 1; i < split.length; i++) {
-      split[i] = removeQuote(split[i]);
+      split[i] = removeOuterQuote(split[i]);
       // IMPORTANT NOTE: here need to remove quote, otherwise for example 'null' can not be identified as null during writes.
       // This is different from the case when doing type inference, where we do not remove quotes!
 
@@ -335,7 +335,7 @@ public class CSVReader extends BasicReader {
 
     for (int i = 1; i < split.length; i++) {
       int overallIndex = overallSchema.getIndex(currentFileSchema.getFields()[i - 1]);
-      split[i] = removeQuote(split[i]);
+      split[i] = removeOuterQuote(split[i]);
 
       fields.set(overallIndex, parseField(split[i], overallSchema, overallIndex));
     }
