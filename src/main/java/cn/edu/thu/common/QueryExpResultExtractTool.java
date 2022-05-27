@@ -12,11 +12,36 @@ import java.util.Map;
 
 public class QueryExpResultExtractTool {
 
+  /**
+   * [INFO ] 2022-05-27 17:35:02.584 [main] cn.edu.thu.database.timescaledb.TimescaleDBManager.query:158
+   * - Query finished. Total lines: 135207. Query Number: 1
+   * <p>
+   * [INFO ] 2022-05-27 17:35:02.584 [main] cn.edu.thu.database.timescaledb.TimescaleDBManager.query:160
+   * - SQL1: select time,"collecttime" from "root.T000100010002.90003_1" limit 1000000;
+   * <p>
+   * [INFO ] 2022-05-27 17:35:02.585 [main] cn.edu.thu.MainQuery.main:37 -
+   * Exp:"TimescaleDB+SINGLE_SERIES_RAW_QUERY_1000000" done! Query Param:1000000. query time:
+   * 200.31725 ms
+   */
   public static void main(String[] args) throws Exception {
-    String file = "D:\\2\\bench.log";
-    String expStr = "TimescaleDB+SINGLE_SERIES_RAW_QUERY";
+
+//    String file = "D:\\2\\TimescaleDB+SINGLE_SERIES_RAW_QUERY.txt";
+//    String expStr = "TimescaleDB+SINGLE_SERIES_RAW_QUERY";
+//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+
+//    String file = "D:\\2\\TimescaleDB+MULTI_SERIES_ALIGN_QUERY.txt";
+//    String expStr = "TimescaleDB+MULTI_SERIES_ALIGN_QUERY";
+//    int[] queryParameters = new int[]{1, 10, 100, 1000};
+
+//    String file = "D:\\2\\TimescaleDB+SINGLE_SERIES_COUNT_QUERY.txt";
+//    String expStr = "TimescaleDB+SINGLE_SERIES_COUNT_QUERY";
+//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+
+    String file = "D:\\2\\TimescaleDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
+    String expStr = "TimescaleDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
+    int[] queryParameters = new int[]{1000000, 10000, 100, 1};
+
     String expNameFormat = "\"%s_%d\""; // the double quote is important to distinguish different parameters
-    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
     int repeatNumber = 5; // 每个查询参数的实验重复次数
     String output = expStr + ".csv";
 
