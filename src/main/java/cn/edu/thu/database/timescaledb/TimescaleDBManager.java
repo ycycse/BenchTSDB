@@ -4,12 +4,14 @@ import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
+import com.google.common.collect.EvictingQueue;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Queue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,18 +116,24 @@ public class TimescaleDBManager implements IDataBaseManager {
     int c = 0;
     try (Statement statement = connection.createStatement()) {
       if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
+        // use queue to store results to avoid JIT compiler loop unrolling
+        Queue<String> fifo = EvictingQueue.create(config.QUERY_RESULT_QUEUE_LINE_LIMIT);
         start = System.nanoTime();
         for (String sql : sqls) {
           ResultSet rs = statement.executeQuery(sql);
           while (rs.next()) {
             c++;
+            StringBuilder line = new StringBuilder();
             for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
               // NOTE: Comparatively, IoTDB includes dataSet.next(). So here the process of extracting records is also included:
-              rs.getObject(i); // but will this step be skipped by compiler?
+              line.append(rs.getObject(i));
+              line.append(",");
             }
+            fifo.add(line.toString());
           }
         }
         elapsedTime = System.nanoTime() - start;
+        logger.info(fifo.toString());
       } else {
         start = System.nanoTime();
         for (String sql : sqls) {

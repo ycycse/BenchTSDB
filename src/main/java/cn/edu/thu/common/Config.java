@@ -9,6 +9,8 @@ import org.slf4j.LoggerFactory;
 
 public class Config {
 
+  public static final int QUERY_RESULT_QUEUE_LINE_LIMIT = 1000;
+
   public static final String DEFAULT_TAG = "DEFAULT";
   private static Logger logger = LoggerFactory.getLogger(Config.class);
 
