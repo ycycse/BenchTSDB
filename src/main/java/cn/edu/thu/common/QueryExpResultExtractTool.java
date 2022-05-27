@@ -113,7 +113,6 @@ public class QueryExpResultExtractTool {
 //    String expStr = "KairosDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
 //    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
 
-
     String expNameFormat = "\"%s_%d\""; // the double quote is important to distinguish different parameters
     int repeatNumber = 5; // 每个查询参数的实验重复次数
     String output = expStr + ".csv";
@@ -151,15 +150,17 @@ public class QueryExpResultExtractTool {
     writer.println(header.toString());
     for (int param : queryParameters) {
       double sum = 0;
+      int actualRepeatNum = 0;
       StringBuilder stringBuilder = new StringBuilder();
       stringBuilder.append(param);
       for (double latency : queryLatencies.get(param)) {
         sum += latency;
+        actualRepeatNum++;
         stringBuilder.append(",");
         stringBuilder.append(latency);
       }
       stringBuilder.append(",");
-      stringBuilder.append(sum / repeatNumber);
+      stringBuilder.append(sum / actualRepeatNum);
       // each line corresponds to the repeated query latencies under a query parameter
       writer.println(stringBuilder.toString());
     }
