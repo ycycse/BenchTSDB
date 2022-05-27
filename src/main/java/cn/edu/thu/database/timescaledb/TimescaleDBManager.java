@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.Arrays;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +25,7 @@ public class TimescaleDBManager implements IDataBaseManager {
   //  private static final String tableName = "tb1";
   private String currentTagTable = null; // NOTE: 不要设置为static，因为逻辑不可以被多个线程共同修改
 
-//  private static final int fieldLimit = 1599; // PG表最多可以有 1600 个字段，time占去一个
+  //  private static final int fieldLimit = 1599; // PG表最多可以有 1600 个字段，time占去一个
   private static final int fieldLimit = 700; // PG表最多可以有 1600 个字段，time占去一个。同时PG还有一行的大小限制，不能超过8160.
 
   // chunk_time_interval=7d
@@ -94,9 +95,9 @@ public class TimescaleDBManager implements IDataBaseManager {
 
   @Override
   public long query() {
-    String[] queryInfo = generateQuery();
-    String queryURL = queryInfo[0];
-    String sql = queryInfo[1];
+    String[] res = generateQuery();
+    String queryURL = res[0];
+    String[] sqls = Arrays.copyOfRange(res, 1, res.length);
     try {
       connection = DriverManager.getConnection(queryURL, config.TIMESCALEDB_USERNAME,
           config.TIMESCALEDB_PASSWORD);
@@ -104,7 +105,9 @@ public class TimescaleDBManager implements IDataBaseManager {
       logger.error("Initialize TimescaleDB failed because ", e);
     }
     logger.info("connecting url: " + queryURL);
-    logger.info("Begin query: {}", sql);
+    for (String sql : sqls) {
+      logger.info("Begin query: {}", sql);
+    }
 
     long start = 0;
     long elapsedTime = 0;
@@ -112,26 +115,30 @@ public class TimescaleDBManager implements IDataBaseManager {
     try (Statement statement = connection.createStatement()) {
       if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
         start = System.nanoTime();
-        ResultSet rs = statement.executeQuery(sql);
-        while (rs.next()) {
-          c++;
-          for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-            // NOTE: Comparatively, IoTDB includes dataSet.next(). So here the process of extracting records is also included:
-            rs.getObject(i); // but will this step be skipped by compiler?
+        for (String sql : sqls) {
+          ResultSet rs = statement.executeQuery(sql);
+          while (rs.next()) {
+            c++;
+            for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+              // NOTE: Comparatively, IoTDB includes dataSet.next(). So here the process of extracting records is also included:
+              rs.getObject(i); // but will this step be skipped by compiler?
+            }
           }
         }
         elapsedTime = System.nanoTime() - start;
       } else {
         start = System.nanoTime();
-        ResultSet rs = statement.executeQuery(sql);
-        while (rs.next()) {
-          c++;
-          StringBuilder line = new StringBuilder();
-          for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-            line.append(rs.getObject(i));
-            line.append(",");
+        for (String sql : sqls) {
+          ResultSet rs = statement.executeQuery(sql);
+          while (rs.next()) {
+            c++;
+            StringBuilder line = new StringBuilder();
+            for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+              line.append(rs.getObject(i));
+              line.append(",");
+            }
+            logger.info(line.toString());
           }
-          logger.info(line.toString());
         }
         elapsedTime = System.nanoTime() - start;
       }
@@ -139,58 +146,74 @@ public class TimescaleDBManager implements IDataBaseManager {
       e.printStackTrace();
       logger.error("meet error when writing: {}", e.getMessage());
     }
-    logger.info("Query finished. Total lines: {}. SQL: {}", c, sql);
+
+    logger.info("Query finished. Total lines: {}. Query Number: {}", c, sqls.length);
+    for (int n = 1; n <= sqls.length; n++) {
+      logger.info("SQL{}: {}", n, sqls[n - 1]);
+    }
     return elapsedTime;
   }
 
   /**
-   * @return the first string denotes queryURL, the second string denotes sql
+   * @return the first string denotes queryURL, the rest strings denote sqls
    */
   private String[] generateQuery() {
-    String queryURL = null;
-    String sql = null;
+    String[] res = null;
     switch (config.QUERY_TYPE) {
       case "SINGLE_SERIES_RAW_QUERY":
         // use yanchang dataset
-        queryURL = String
+        String queryURL = String
             .format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT, "yanchang");
-        sql = String.format("select %s from %s limit %d;", encapName("collecttime"),
-            encapName("root.T000100010002.90003"), config.QUERY_PARAM);
+        res = new String[2];
+        res[0] = queryURL;
+        res[1] = String.format("select time,%s from %s limit %d;", encapName("collecttime"),
+            encapName(tagOneToMore("root.T000100010002.90003", 1)),
+            config.QUERY_PARAM); // "root.T000100010002.90003" sensor number is less than fieldLimit=700, so only one table is selected
         break;
       case "MULTI_SERIES_ALIGN_QUERY":
         // use dianchang dataset
         queryURL = String
             .format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT, "dianchang");
-        String sql_format = "select %s from %s;";
-        StringBuilder selectSensors = new StringBuilder();
-        for (int i = 1; i < config.QUERY_PARAM + 1; i++) {
-          selectSensors.append(encapName("sensor" + i));
-          if (i < config.QUERY_PARAM) {
-            selectSensors.append(",");
+        int splitNum = (int) Math.ceil(config.QUERY_PARAM * 1.0 / fieldLimit);
+        res = new String[1 + splitNum];
+        res[0] = queryURL;
+        for (int n = 1; n <= splitNum; n++) {
+          String sql_format = "select time,%s from %s;";
+          StringBuilder selectSensors = new StringBuilder();
+          for (int i = (n - 1) * fieldLimit + 1;  // dianchang dataset has sensorID starting from 1
+              i <= Math.min(config.QUERY_PARAM, n * fieldLimit); i++) {
+            selectSensors.append(encapName("sensor" + i));
+            if (i < Math.min(config.QUERY_PARAM, n * fieldLimit)) {
+              selectSensors.append(",");
+            }
           }
+          res[n] = String
+              .format(sql_format, selectSensors.toString(),
+                  encapName(tagOneToMore("root.DianChang.d1", n)));
         }
-        sql = String.format(sql_format, selectSensors.toString(), encapName("root.DianChang.d1"));
         break;
       case "SINGLE_SERIES_COUNT_QUERY":
         // use yanchang dataset
         queryURL = String
             .format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT, "yanchang");
+        res = new String[2];
+        res[0] = queryURL;
         switch (config.QUERY_PARAM) {
           case 1:
-            sql = String.format("select count(%s) from %s where time<=1601023212859;",
-                encapName("collecttime"), encapName("root.T000100010002.90003"));
+            res[1] = String.format("select count(%s) from %s where time<=1601023212859;",
+                encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
             break;
           case 100:
-            sql = String.format("select count(%s) from %s where time<=1601023262692;",
-                encapName("collecttime"), encapName("root.T000100010002.90003"));
+            res[1] = String.format("select count(%s) from %s where time<=1601023262692;",
+                encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
             break;
           case 10000:
-            sql = String.format("select count(%s) from %s where time<=1601045811969;",
-                encapName("collecttime"), encapName("root.T000100010002.90003"));
+            res[1] = String.format("select count(%s) from %s where time<=1601045811969;",
+                encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
             break;
           case 1000000:
-            sql = String.format("select count(%s) from %s where time<=1602131946370;",
-                encapName("collecttime"), encapName("root.T000100010002.90003"));
+            res[1] = String.format("select count(%s) from %s where time<=1602131946370;",
+                encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
             break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");
@@ -201,28 +224,34 @@ public class TimescaleDBManager implements IDataBaseManager {
         // use yanchang dataset
         queryURL = String
             .format(POSTGRESQL_URL, config.TIMESCALEDB_HOST, config.TIMESCALEDB_PORT, "yanchang");
+        res = new String[2];
+        res[0] = queryURL;
         String sqlFormat =
             "select floor((time-%3$d)/%5$d)*%5$d+%3$d,count(%1$s) from %2$s where time>=%3$d "
                 + "and time<%4$d group by floor((time-%3$d)/%5$d);";
         switch (config.QUERY_PARAM) { // note that the startTime is modified to align with influxdb group by time style
           case 1:
-            sql = String
-                .format(sqlFormat, encapName("collecttime"), encapName("root.T000100010002.90003"),
+            res[1] = String
+                .format(sqlFormat, encapName("collecttime"),
+                    encapName(tagOneToMore("root.T000100010002.90003", 1)),
                     1601023212859L, 1602479033308L, 1);
             break;
           case 100:
-            sql = String
-                .format(sqlFormat, encapName("collecttime"), encapName("root.T000100010002.90003"),
+            res[1] = String
+                .format(sqlFormat, encapName("collecttime"),
+                    encapName(tagOneToMore("root.T000100010002.90003", 1)),
                     1601023212800L, 1602479033308L, 100);
             break;
           case 10000:
-            sql = String
-                .format(sqlFormat, encapName("collecttime"), encapName("root.T000100010002.90003"),
+            res[1] = String
+                .format(sqlFormat, encapName("collecttime"),
+                    encapName(tagOneToMore("root.T000100010002.90003", 1)),
                     1601023210000L, 1602479033308L, 10000);
             break;
           case 1000000:
-            sql = String
-                .format(sqlFormat, encapName("collecttime"), encapName("root.T000100010002.90003"),
+            res[1] = String
+                .format(sqlFormat, encapName("collecttime"),
+                    encapName(tagOneToMore("root.T000100010002.90003", 1)),
                     1601023000000L, 1602479033308L, 1000000);
             break;
           default:
@@ -234,7 +263,7 @@ public class TimescaleDBManager implements IDataBaseManager {
         logger.error("QUERY_TYPE not correct! Please check your configurations.");
         break;
     }
-    return new String[]{queryURL, sql};
+    return res;
   }
 
   @Override
@@ -375,7 +404,7 @@ public class TimescaleDBManager implements IDataBaseManager {
           // this is for replacing inner single quotes with double quotes
           // for example: '{'La':0.0,'Lo':0.0,'Satellite':0,'Speed':0,'Direction':0,'GSMSignal':255}'
           // the outer single quotes are removed while the inner is still there like 'La'
-          value = ((String)value).replace('\'','\"');
+          value = ((String) value).replace('\'', '\"');
 
           builder_value.append(",'").append(value).append("'");
           // NOTE that outer quotes are removed during converting lines to records, so here need to be added for string type in TimescaleDB.
