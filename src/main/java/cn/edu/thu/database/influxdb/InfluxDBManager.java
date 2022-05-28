@@ -40,9 +40,10 @@ public class InfluxDBManager implements IDataBaseManager {
     this.config = config;
 
     OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient().newBuilder()
-        .connectTimeout(3600, TimeUnit.SECONDS)
-        .readTimeout(3600, TimeUnit.SECONDS)
-        .writeTimeout(3600, TimeUnit.SECONDS);
+        .connectTimeout(5, TimeUnit.MINUTES)
+        .readTimeout(5, TimeUnit.MINUTES)
+        .writeTimeout(5, TimeUnit.MINUTES)
+        .retryOnConnectionFailure(true);
 
     influxDB = InfluxDBFactory.connect(config.INFLUXDB_URL, okHttpClientBuilder);
     database = config.INFLUXDB_DATABASE;
