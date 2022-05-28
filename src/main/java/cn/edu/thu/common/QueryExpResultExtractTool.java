@@ -55,9 +55,9 @@ public class QueryExpResultExtractTool {
 //    String expStr = "InfluxDB+SINGLE_SERIES_COUNT_QUERY";
 //    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
 
-//    String file = "D:\\2\\InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
-//    String expStr = "InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
-//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+    String file = "D:\\2\\InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
+    String expStr = "InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
+    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
 
     // -------------------------------------------
 
@@ -97,9 +97,9 @@ public class QueryExpResultExtractTool {
 
     // -------------------------------------------
 
-    String file = "D:\\2\\KairosDB+SINGLE_SERIES_RAW_QUERY.txt";
-    String expStr = "KairosDB+SINGLE_SERIES_RAW_QUERY";
-    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+//    String file = "D:\\2\\KairosDB+SINGLE_SERIES_RAW_QUERY.txt";
+//    String expStr = "KairosDB+SINGLE_SERIES_RAW_QUERY";
+//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
 
 //    String file = "D:\\2\\KairosDB+MULTI_SERIES_ALIGN_QUERY.txt";
 //    String expStr = "KairosDB+MULTI_SERIES_ALIGN_QUERY";
