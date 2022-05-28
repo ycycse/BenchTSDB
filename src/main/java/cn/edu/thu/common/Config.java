@@ -275,9 +275,9 @@ public class Config {
       QUERY_END_TIME = Long.parseLong(endTime);
     }
 
-    INFER_TYPE_MAX_RECORD_NUM =
-        Math.min(INFER_TYPE_MAX_RECORD_NUM,
-            BATCH_SIZE); // because the batch for inferring data type will also be batched written out
+//    INFER_TYPE_MAX_RECORD_NUM =
+//        Math.min(INFER_TYPE_MAX_RECORD_NUM,
+//            BATCH_SIZE); // because the batch for inferring data type will also be batched written out
 
   }
 }

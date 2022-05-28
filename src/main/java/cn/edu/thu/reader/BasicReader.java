@@ -112,7 +112,7 @@ public abstract class BasicReader implements Iterator<List<Record>> {
       throw new NoSuchElementException();
     }
     List<Record> records = convertCachedLinesToRecords();
-    cachedLines.clear();
+//    cachedLines.clear();
 
     return records;
   }

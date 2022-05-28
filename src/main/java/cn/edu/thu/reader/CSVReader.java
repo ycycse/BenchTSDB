@@ -34,6 +34,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -281,9 +282,17 @@ public class CSVReader extends BasicReader {
   @Override
   public List<Record> convertCachedLinesToRecords() {
     List<Record> records = new ArrayList<>();
-    for (String cachedLine : cachedLines) {
+    Iterator<String> it = cachedLines.iterator();
+    int n = 0;
+    while (n < config.BATCH_SIZE && it.hasNext()) {
+      String cachedLine = it.next();
+      it.remove();
       records.add(convertToRecord(cachedLine));
+      n++;
     }
+//    for (String cachedLine : cachedLines) {
+//      records.add(convertToRecord(cachedLine));
+//    }
     return records;
   }
 
