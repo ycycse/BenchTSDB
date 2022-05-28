@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import okhttp3.OkHttpClient;
 import org.influxdb.InfluxDB;
 import org.influxdb.InfluxDBFactory;
 import org.influxdb.dto.BatchPoints;
@@ -38,12 +39,12 @@ public class InfluxDBManager implements IDataBaseManager {
   public InfluxDBManager(Config config) {
     this.config = config;
 
-//    OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient().newBuilder()
-//        .connectTimeout(3600, TimeUnit.SECONDS)
-//        .readTimeout(3600, TimeUnit.SECONDS)
-//        .writeTimeout(3600, TimeUnit.SECONDS);
+    OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient().newBuilder()
+        .connectTimeout(3600, TimeUnit.SECONDS)
+        .readTimeout(3600, TimeUnit.SECONDS)
+        .writeTimeout(3600, TimeUnit.SECONDS);
 
-    influxDB = InfluxDBFactory.connect(config.INFLUXDB_URL);
+    influxDB = InfluxDBFactory.connect(config.INFLUXDB_URL, okHttpClientBuilder);
     database = config.INFLUXDB_DATABASE;
   }
 
@@ -245,7 +246,9 @@ public class InfluxDBManager implements IDataBaseManager {
     List<Point> points = new ArrayList<>();
     for (Record record : records) {
       Point point = convertRecord(record, schema);
-      points.add(point);
+      if (point != null) {
+        points.add(point);
+      }
     }
     return points;
   }
@@ -263,11 +266,15 @@ public class InfluxDBManager implements IDataBaseManager {
       fieldSet.put(schema.getFields()[i], record.fields.get(i));
     }
 
-    return Point.measurement(measurementId)
-        .time(record.timestamp, TimeUnit.MILLISECONDS) //TODO: check this unit
-        .tag(tagSet)
-        .fields(fieldSet)
-        .build();
+    if (fieldSet.isEmpty()) {
+      return null; // TODO: solve bug: java.lang.IllegalArgumentException: Expecting a positive number for fields size
+    } else {
+      return Point.measurement(measurementId)
+          .time(record.timestamp, TimeUnit.MILLISECONDS) //TODO: check this unit
+          .tag(tagSet)
+          .fields(fieldSet)
+          .build();
+    }
   }
 
 }

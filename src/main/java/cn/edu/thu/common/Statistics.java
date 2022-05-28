@@ -10,9 +10,9 @@ public class Statistics {
   public AtomicLong pointNum = new AtomicLong(0);
   public AtomicLong timeCost = new AtomicLong(0); // unit: ns
 
-  private final int vectorSize = 100;
+  private final int vectorSize = 10000;
   private static int pos = 0;
-  public Vector<Long> writeLatency = new Vector<>(vectorSize);
+  public Vector<Long> writeLatency = new Vector<>(vectorSize); // in nanoseconds
 
   public void addLatency(long timestampInNanosecond) {
     if (writeLatency.size() < vectorSize) {
@@ -27,11 +27,11 @@ public class Statistics {
   }
 
   public double getAverageLatencyInMillisecond() {
-    long sum = 0;
+    double sum = 0;
     for (int i = 0; i <= writeLatency.size() - 1; i++) {
-      sum += writeLatency.get(i);
+      sum += (writeLatency.get(i) * 1.0 / 1000_000F); // convert nanosecond to millisecond beforehand
     }
-    return sum * 1.0 / writeLatency.size() / 1000_000F;
+    return sum / writeLatency.size();
   }
 
   public Statistics() {

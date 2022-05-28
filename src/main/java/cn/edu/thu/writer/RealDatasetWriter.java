@@ -79,12 +79,11 @@ public class RealDatasetWriter implements Runnable {
         logger.info(
             "Exp:{} ING. Current records:{}, points:{}, time:{} ms, speed:{} pts/s, "
                 + "average latency:{} ms, "
-                + "latency circular list(length:{},unit:ns):{}",
+                + "latency circular list(length:{},unit:ns): SKIP",
             config.EXP_NAME, statistics.recordNum, statistics.pointNum,
             (float) statistics.timeCost.get() / 1000_000F, statistics.speed(),
             statistics.getAverageLatencyInMillisecond(),
-            statistics.writeLatency.size(),
-            statistics.writeLatency
+            statistics.writeLatency.size()
         );
       }
 
