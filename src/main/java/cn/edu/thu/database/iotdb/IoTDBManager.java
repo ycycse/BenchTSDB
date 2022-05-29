@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.stream.Collectors;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.session.Session;
 import org.apache.iotdb.session.SessionDataSet;
@@ -101,14 +102,46 @@ public class IoTDBManager implements IDataBaseManager {
   }
 
   private long insertBatchNonAligned(List<Record> records, Session session, Schema schema) {
-    Tablet tablet = convertToTablet(records, schema);
-    long start = System.nanoTime();
-    try {
-      session.insertTablet(tablet);
-    } catch (Exception e) {
-      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
+    if (config.IOTDB_INSERT_NONALIGN_BY_TABLET) { // insert by tablet
+      Tablet tablet = convertToTablet(records, schema);
+      long start = System.nanoTime();
+      try {
+        session.insertTablet(tablet);
+      } catch (Exception e) {
+        logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
+      }
+      return System.nanoTime() - start;
+    } else { // insert by records
+
+//      String deviceId = getDevicePath(batch.getDeviceSchema());
+//      List<String> deviceIds = new ArrayList<>();
+//      List<Long> times = new ArrayList<>();
+//      List<List<String>> measurementsList = new ArrayList<>();
+//      List<List<TSDataType>> typesList = new ArrayList<>();
+//      List<List<Object>> valuesList = new ArrayList<>();
+//      List<String> sensors =
+//          batch.getDeviceSchema().getSensors().stream()
+//              .map(sensor -> sensor.getName())
+//              .collect(Collectors.toList());
+//
+//      for (Record record : batch.getRecords()) {
+//        deviceIds.add(deviceId);
+//        times.add(record.getTimestamp());
+//        measurementsList.add(sensors);
+//        valuesList.add(record.getRecordDataValue());
+//        typesList.add(
+//            constructDataTypes(
+//                batch.getDeviceSchema().getSensors(), record.getRecordDataValue().size()));
+//      }
+//      try {
+//        session.insertRecords(deviceIds, times, measurementsList, typesList, valuesList);
+//        return new Status(true);
+//      } catch (IoTDBConnectionException | StatementExecutionException e) {
+//        return new Status(false, 0, e, e.toString());
+//      }
+
+      return 0;
     }
-    return System.nanoTime() - start;
   }
 
   private Tablet convertToTablet(List<Record> records, Schema schema) {

@@ -60,6 +60,7 @@ public class Config {
   public boolean IOTDB_ENABLE_THRIFT_COMPRESSION = false;
   public int IOTDB_QUERY_SESSION_FETCH_SIZE = 5000;
   public String IOTDB_STORAGE_GROUP = "mysg1";
+  public boolean IOTDB_INSERT_NONALIGN_BY_TABLET = true; // false to insert by records
 
   public String INFLUXDB_URL = "http://127.0.0.1:8086";
   public int INFLUXDB_QUERY_CHUNKING_SIZE = 5000;
@@ -176,6 +177,9 @@ public class Config {
             .toString());
     IOTDB_STORAGE_GROUP = properties.getOrDefault("IOTDB_STORAGE_GROUP", IOTDB_STORAGE_GROUP)
         .toString();
+    IOTDB_INSERT_NONALIGN_BY_TABLET = Boolean.parseBoolean(
+        properties.getOrDefault("IOTDB_INSERT_NONALIGN_BY_TABLET", IOTDB_INSERT_NONALIGN_BY_TABLET)
+            .toString());
 
     INFLUXDB_URL = properties.getOrDefault("INFLUXDB_URL", INFLUXDB_URL).toString();
     INFLUXDB_QUERY_CHUNKING_SIZE = Integer.parseInt(
