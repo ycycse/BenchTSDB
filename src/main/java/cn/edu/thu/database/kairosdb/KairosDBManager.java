@@ -137,7 +137,12 @@ public class KairosDBManager implements IDataBaseManager {
         KairosDBPoint kairosDBPoint = points.get(i);
         List<Object> point = new ArrayList<>();
         point.add(record.timestamp);
-        point.add(value);
+        if (schema.getTypes()[i] == String.class) {
+          point.add("\"" + value + "\""); // note that field had been removeOuterQuote in CSVReader
+        } else {
+          point.add(value);
+        }
+
         kairosDBPoint.addDatapoints(point);
       }
     }
@@ -162,7 +167,12 @@ public class KairosDBManager implements IDataBaseManager {
       KairosDBPoint point = new KairosDBPoint();
       point.setName(schema.getFields()[i]);
       point.setTimestamp(record.timestamp);
-      point.setValue(record.fields.get(i));
+      if (schema.getTypes()[i] == String.class) {
+        point.setValue(
+            "\"" + value + "\""); // note that field had been removeOuterQuote in CSVReader
+      } else {
+        point.setValue(value);
+      }
       point.setTags(tags);
       points.add(point);
     }

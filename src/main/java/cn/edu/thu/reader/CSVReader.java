@@ -91,6 +91,46 @@ public class CSVReader extends BasicReader {
 
   private void inferTypeWithData(int fieldNum, Schema schema, BufferedReader reader,
       boolean fillCache) throws IOException {
+    for (int i = 0; i < fieldNum; i++) {
+      schema.getTypes()[i] = null;
+    }
+
+    String line;
+    int numRead = 0;
+    while (++numRead <= config.INFER_TYPE_MAX_RECORD_NUM
+        && (line = reader.readLine())
+        != null) { // note the sequence, make this command the last to avoid miss the line
+      String[] lineSplit = line.split(config.CSV_SEPARATOR);
+
+      for (int i = 0; i < fieldNum; i++) {
+        if (i + 1 >= lineSplit.length) {
+          continue;
+        }
+//        String field = removeOuterQuote(lineSplit[unknownTypeIndex + 1]);
+        //TODO: do not remove quote, otherwise string may be wrongly inferred as long
+        String field = lineSplit[i + 1];
+
+        Class<?> aClass = inferType(field);
+
+        schema.getTypes()[i] = SchemaSet.mergeType(schema.getTypes()[i], aClass);
+        // this is to mitigate the tianyuan dataset problem:
+        // some fields at first have int values while have string values afterwards...
+      }
+      if (fillCache) {
+        cachedLines.add(line);
+      }
+    }
+
+    for (int i = 0; i < fieldNum; i++) {
+      if (schema.getTypes()[i] == null) {
+        schema.getTypes()[i] = String.class;
+      }
+    }
+
+  }
+
+  private void inferTypeWithData_deprecated(int fieldNum, Schema schema, BufferedReader reader,
+      boolean fillCache) throws IOException {
     Set<Integer> unknownTypeIndices = new HashSet<>();
     for (int i = 0; i < fieldNum; i++) {
       unknownTypeIndices.add(i);
@@ -435,7 +475,7 @@ public class CSVReader extends BasicReader {
       }
     }
 
-    private Class<?> mergeType(Class<?> t1, Class<?> t2) {
+    public static Class<?> mergeType(Class<?> t1, Class<?> t2) {
       if (t1 == null && t2 == null) {
         return null;
       }
