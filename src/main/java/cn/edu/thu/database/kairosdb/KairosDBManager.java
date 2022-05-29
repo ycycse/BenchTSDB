@@ -138,9 +138,11 @@ public class KairosDBManager implements IDataBaseManager {
         List<Object> point = new ArrayList<>();
         point.add(record.timestamp);
         if (schema.getTypes()[i] == String.class) {
-          point.add("\"" + value + "\""); // note that field had been removeOuterQuote in CSVReader
+          point.add("\"" + record.fields.get(i)
+              + "\""); // note that field had been removeOuterQuote in CSVReader
+          // 不过如果是string类型，本身这个record.fields.get(i)就是string类型吧。直接add(value)可能就不行。
         } else {
-          point.add(value);
+          point.add(record.fields.get(i));
         }
 
         kairosDBPoint.addDatapoints(point);
@@ -169,9 +171,10 @@ public class KairosDBManager implements IDataBaseManager {
       point.setTimestamp(record.timestamp);
       if (schema.getTypes()[i] == String.class) {
         point.setValue(
-            "\"" + value + "\""); // note that field had been removeOuterQuote in CSVReader
+            "\"" + record.fields.get(i)
+                + "\""); // note that field had been removeOuterQuote in CSVReader
       } else {
-        point.setValue(value);
+        point.setValue(record.fields.get(i));
       }
       point.setTags(tags);
       points.add(point);

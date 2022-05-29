@@ -264,7 +264,13 @@ public class InfluxDBManager implements IDataBaseManager {
       if (value == null) {
         continue;
       }
-      fieldSet.put(schema.getFields()[i], record.fields.get(i));
+      if (schema.getTypes()[i] == String.class) {
+        // note that field had been removeOuterQuote in CSVReader
+        fieldSet.put(schema.getFields()[i], "\"" + record.fields.get(i) + "\"");
+        // 不过如果是string类型，本身这个record.fields.get(i)就是string类型吧
+      } else {
+        fieldSet.put(schema.getFields()[i], record.fields.get(i));
+      }
     }
 
     if (fieldSet.isEmpty()) {

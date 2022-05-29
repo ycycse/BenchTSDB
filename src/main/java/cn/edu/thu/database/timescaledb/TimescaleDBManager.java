@@ -409,7 +409,7 @@ public class TimescaleDBManager implements IDataBaseManager {
 
         Object value = values.get(i);
         if (schema.getTypes()[i] == String.class && value != null) {
-          // this is for replacing inner single quotes with double quotes
+          // this is for replacing inner single quotes with double quotes, otherwise timescaledb go wrong
           // for example: '{'La':0.0,'Lo':0.0,'Satellite':0,'Speed':0,'Direction':0,'GSMSignal':255}'
           // the outer single quotes are removed while the inner is still there like 'La'
           value = ((String) value).replace('\'', '\"');
