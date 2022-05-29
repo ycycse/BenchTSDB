@@ -71,6 +71,7 @@ public class RealDatasetWriter implements Runnable {
       while (reader.hasNext()) {
         List<Record> batch = reader.next();
         long elapsedTime = database.insertBatch(batch, reader.getCurrentSchema());
+        statistics.batchInsertNum.addAndGet(1);
         statistics.addLatency(elapsedTime);
         statistics.timeCost.addAndGet(elapsedTime);
         statistics.recordNum.addAndGet(batch.size());
@@ -78,11 +79,13 @@ public class RealDatasetWriter implements Runnable {
         logger.info("batch size: " + batch.size());
         logger.info(
             "Exp:{} ING. Current records:{}, points:{}, time:{} ms, speed:{} pts/s, "
-                + "average latency:{} ms, "
+                + "average latency using all:{} ms, "
+                + "average latency circular:{} ms, "
                 + "latency circular list(length:{},unit:ns): SKIP",
             config.EXP_NAME, statistics.recordNum, statistics.pointNum,
             (float) statistics.timeCost.get() / 1000_000F, statistics.speed(),
-            statistics.getAverageLatencyInMillisecond(),
+            statistics.getAverageAllLatencyInMillisecond(),
+            statistics.getAverageCircularLatencyInMillisecond(),
             statistics.writeLatency.size()
         );
       }

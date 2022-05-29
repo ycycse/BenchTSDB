@@ -9,6 +9,7 @@ public class Statistics {
   public AtomicLong recordNum = new AtomicLong(0);
   public AtomicLong pointNum = new AtomicLong(0);
   public AtomicLong timeCost = new AtomicLong(0); // unit: ns
+  public AtomicLong batchInsertNum = new AtomicLong(0);
 
   private final int vectorSize = 10000;
   private static int pos = 0;
@@ -26,10 +27,15 @@ public class Statistics {
     }
   }
 
-  public double getAverageLatencyInMillisecond() {
+  public double getAverageAllLatencyInMillisecond() {
+    return timeCost.get() * 1.0 / batchInsertNum.get() / 1000_000F;
+  }
+
+  public double getAverageCircularLatencyInMillisecond() {
     double sum = 0;
     for (int i = 0; i <= writeLatency.size() - 1; i++) {
-      sum += (writeLatency.get(i) * 1.0 / 1000_000F); // convert nanosecond to millisecond beforehand
+      sum += (writeLatency.get(i) * 1.0
+          / 1000_000F); // convert nanosecond to millisecond beforehand
     }
     return sum / writeLatency.size();
   }

@@ -107,12 +107,14 @@ public class MainLoad {
     }
 
     logger.info("Exp:{} All done! Total records:{}, points:{}, time:{} ms, speed:{} pts/s, "
-            + "average latency:{} ms, "
+            + "average latency using all:{} ms, "
+            + "average latency circular:{} ms, "
             + "latency circular list(length:{},unit:ns):{}",
         config.EXP_NAME,
         statistics.recordNum,
         statistics.pointNum, (float) statistics.timeCost.get() / 1000_000F, statistics.speed(),
-        statistics.getAverageLatencyInMillisecond(),
+        statistics.getAverageAllLatencyInMillisecond(),
+        statistics.getAverageCircularLatencyInMillisecond(),
         statistics.writeLatency.size(),
         statistics.writeLatency
     );
