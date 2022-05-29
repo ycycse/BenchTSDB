@@ -311,13 +311,18 @@ public class CSVReader extends BasicReader {
     }
 
     Class<?> type = schema.getTypes()[index];
-    if (type == Long.class) {
-      return Long.parseLong(field);
+    try {
+      if (type == Long.class) {
+        return Long.parseLong(field);
+      }
+      if (type == Double.class) {
+        return Double.parseDouble(field);
+      }
+      return field;
+    } catch (NumberFormatException ignore) {
+      logger.info("field {}: parseField type conflict: return null object.", field);
+      return null;
     }
-    if (type == Double.class) {
-      return Double.parseDouble(field);
-    }
-    return field;
   }
 
   private List<Object> fieldsWithCurrentFileSchema(String[] split) {
