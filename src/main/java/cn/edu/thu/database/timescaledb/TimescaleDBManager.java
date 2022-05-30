@@ -242,25 +242,25 @@ public class TimescaleDBManager implements IDataBaseManager {
             res[1] = String
                 .format(sqlFormat, encapName("collecttime"),
                     encapName(tagOneToMore("root.T000100010002.90003", 1)),
-                    1601023212859L, 1602479033308L, 1);
+                    1601023212859L, 1605835996093L, 1);
             break;
           case 100:
             res[1] = String
                 .format(sqlFormat, encapName("collecttime"),
                     encapName(tagOneToMore("root.T000100010002.90003", 1)),
-                    1601023212800L, 1602479033308L, 100);
+                    1601023212800L, 1605835996093L, 100);
             break;
           case 10000:
             res[1] = String
                 .format(sqlFormat, encapName("collecttime"),
                     encapName(tagOneToMore("root.T000100010002.90003", 1)),
-                    1601023210000L, 1602479033308L, 10000);
+                    1601023210000L, 1605835996093L, 10000);
             break;
           case 1000000:
             res[1] = String
                 .format(sqlFormat, encapName("collecttime"),
                     encapName(tagOneToMore("root.T000100010002.90003", 1)),
-                    1601023000000L, 1602479033308L, 1000000);
+                    1601023000000L, 1605835996093L, 1000000);
             break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");

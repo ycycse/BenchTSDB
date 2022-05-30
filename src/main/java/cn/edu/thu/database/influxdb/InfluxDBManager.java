@@ -201,7 +201,7 @@ public class InfluxDBManager implements IDataBaseManager {
         queryDatabase = "yanchang";
         sql = String.format(
             "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' "
-                + "and time>=1601023212859000000 and time<=1602479033307000000 group by time(%dms)",
+                + "and time>=1601023212859000000 and time<=1605835996092000000 group by time(%dms)",
             config.QUERY_PARAM);
         break;
       default:

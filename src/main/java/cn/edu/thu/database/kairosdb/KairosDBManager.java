@@ -307,7 +307,7 @@ public class KairosDBManager implements IDataBaseManager {
         queryMap.put("metrics", subQueries);
         break;
       case "SINGLE_SERIES_DOWNSAMPLING_QUERY":
-        // select count(collecttime) from root.T000100010002.90003 group by ([1601023212859, 1602479033308), 1ms)
+        // select count(collecttime) from root.T000100010002.90003 group by ([1601023212859, 1605835996093), 1ms)
 
         subQueries = new ArrayList<>();
         subQuery = new HashMap<>();
@@ -347,6 +347,7 @@ public class KairosDBManager implements IDataBaseManager {
             logger.error("QUERY_PARAM not correct! Please check your configurations.");
             break;
         }
+        queryMap.put(QUERY_END_TIME, 1605835996093L);
         subQueries.add(subQuery);
         queryMap.put("metrics", subQueries);
         break;

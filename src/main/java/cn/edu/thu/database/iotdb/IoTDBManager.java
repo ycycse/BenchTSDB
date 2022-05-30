@@ -324,16 +324,16 @@ public class IoTDBManager implements IDataBaseManager {
         // use yanchang dataset
         switch (config.QUERY_PARAM) { // note that the startTime is modified to align with influxdb group by time style
           case 1:
-            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023212859, 1602479033308), 1ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023212859, 1605835996093), 1ms)";
             break;
           case 100:
-            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023212800, 1602479033308), 100ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023212800, 1605835996093), 100ms)";
             break;
           case 10000:
-            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023210000, 1602479033308), 10000ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023210000, 1605835996093), 10000ms)";
             break;
           case 1000000:
-            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023000000, 1602479033308), 1000000ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023000000, 1605835996093), 1000000ms)";
             break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");
