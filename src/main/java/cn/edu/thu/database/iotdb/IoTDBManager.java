@@ -4,15 +4,14 @@ import cn.edu.thu.common.Config;
 import cn.edu.thu.common.Record;
 import cn.edu.thu.common.Schema;
 import cn.edu.thu.database.IDataBaseManager;
-import com.google.common.collect.EvictingQueue;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.session.Session;
 import org.apache.iotdb.session.SessionDataSet;
+import org.apache.iotdb.session.SessionDataSet.DataIterator;
 import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -239,28 +238,39 @@ public class IoTDBManager implements IDataBaseManager {
   public long query() {
     String sql = generateQuery();
     logger.info("Begin query: {}", sql);
-
-    int c = 0;
     session.setFetchSize(config.IOTDB_QUERY_SESSION_FETCH_SIZE);
+    int c = 0; // total line number
     long start = 0;
     long elapsedTime = 0;
     if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
-      // use queue to store results to avoid JIT compiler loop unrolling
-      Queue<String> fifo = EvictingQueue.create(config.QUERY_RESULT_QUEUE_LINE_LIMIT);
+      /*
+       // use queue to store results to avoid JIT compiler loop unrolling
+       Queue<String> fifo = EvictingQueue.create(config.QUERY_RESULT_QUEUE_LINE_LIMIT);
+       start = System.nanoTime();
+       try (SessionDataSet dataSet = session.executeQueryStatement(sql)) {
+       while (dataSet.hasNext()) {
+       c++;
+       // note that the `constructRowRecordFromValueArray` step is included.
+       // but will this step be skipped by compiler?
+       RowRecord rowRecord = dataSet.next();
+       fifo.add(rowRecord.toString());
+       }
+       } catch (Exception e) {
+       e.printStackTrace();
+       }
+       elapsedTime = System.nanoTime() - start;
+       logger.info(fifo.toString());
+       */
       start = System.nanoTime();
       try (SessionDataSet dataSet = session.executeQueryStatement(sql)) {
-        while (dataSet.hasNext()) {
+        DataIterator ite = dataSet.iterator();
+        while (ite.next()) { // this way avoid constructing rowRecord
           c++;
-          // note that the `constructRowRecordFromValueArray` step is included.
-          // but will this step be skipped by compiler?
-          RowRecord rowRecord = dataSet.next();
-          fifo.add(rowRecord.toString());
         }
       } catch (Exception e) {
         e.printStackTrace();
       }
       elapsedTime = System.nanoTime() - start;
-      logger.info(fifo.toString());
     } else {
       start = System.nanoTime();
       try (SessionDataSet dataSet = session.executeQueryStatement(sql)) {
