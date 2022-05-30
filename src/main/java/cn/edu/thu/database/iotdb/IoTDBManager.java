@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
-import java.util.stream.Collectors;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.session.Session;
 import org.apache.iotdb.session.SessionDataSet;
@@ -81,16 +80,15 @@ public class IoTDBManager implements IDataBaseManager {
   public long insertBatch(List<Record> records, Schema schema) { // use insertTablet interface
     long elapsedTime;
     if (config.useAlignedTablet) {
-      logger.info("insert aligned tablet...");
       elapsedTime = insertBatchAligned(records, session, schema);
     } else {
-      logger.info("insert nonaligned tablet...");
       elapsedTime = insertBatchNonAligned(records, session, schema);
     }
     return elapsedTime;
   }
 
   private long insertBatchAligned(List<Record> records, Session session, Schema schema) {
+    logger.info("insert aligned tablet...");
     Tablet tablet = convertToTablet(records, schema);
     long start = System.nanoTime();
     try {
@@ -103,6 +101,7 @@ public class IoTDBManager implements IDataBaseManager {
 
   private long insertBatchNonAligned(List<Record> records, Session session, Schema schema) {
     if (config.IOTDB_INSERT_NONALIGN_BY_TABLET) { // insert by tablet
+      logger.info("insert nonaligned tablet by tablet...");
       Tablet tablet = convertToTablet(records, schema);
       long start = System.nanoTime();
       try {
@@ -112,35 +111,40 @@ public class IoTDBManager implements IDataBaseManager {
       }
       return System.nanoTime() - start;
     } else { // insert by records
+      logger.info("insert nonaligned tablet by records...");
+      String deviceId = schema.getTag();
+      List<String> deviceIds = new ArrayList<>();
+      List<Long> times = new ArrayList<>();
+      List<List<String>> measurementsList = new ArrayList<>();
+      List<List<TSDataType>> typesList = new ArrayList<>();
+      List<List<Object>> valuesList = new ArrayList<>();
 
-//      String deviceId = getDevicePath(batch.getDeviceSchema());
-//      List<String> deviceIds = new ArrayList<>();
-//      List<Long> times = new ArrayList<>();
-//      List<List<String>> measurementsList = new ArrayList<>();
-//      List<List<TSDataType>> typesList = new ArrayList<>();
-//      List<List<Object>> valuesList = new ArrayList<>();
-//      List<String> sensors =
-//          batch.getDeviceSchema().getSensors().stream()
-//              .map(sensor -> sensor.getName())
-//              .collect(Collectors.toList());
-//
-//      for (Record record : batch.getRecords()) {
-//        deviceIds.add(deviceId);
-//        times.add(record.getTimestamp());
-//        measurementsList.add(sensors);
-//        valuesList.add(record.getRecordDataValue());
-//        typesList.add(
-//            constructDataTypes(
-//                batch.getDeviceSchema().getSensors(), record.getRecordDataValue().size()));
-//      }
-//      try {
-//        session.insertRecords(deviceIds, times, measurementsList, typesList, valuesList);
-//        return new Status(true);
-//      } catch (IoTDBConnectionException | StatementExecutionException e) {
-//        return new Status(false, 0, e, e.toString());
-//      }
+      for (Record record : records) {
+        deviceIds.add(deviceId);
+        times.add(record.timestamp);
+        List<String> sensors = new ArrayList<>();
+        List<Object> values = new ArrayList<>();
+        List<TSDataType> dataTypes = new ArrayList<>();
+        for (int i = 0; i < record.fields.size(); i++) {
+          Object value = record.fields.get(i);
+          if (value != null) { // skip null value
+            sensors.add(schema.getFields()[i]);
+            values.add(value);
+            dataTypes.add(toTsDataType(schema.getTypes()[i]));
+          }
+        }
+        measurementsList.add(sensors);
+        typesList.add(dataTypes);
+        valuesList.add(values);
+      }
 
-      return 0;
+      long start = System.nanoTime();
+      try {
+        session.insertRecords(deviceIds, times, measurementsList, typesList, valuesList);
+      } catch (Exception e) {
+        logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
+      }
+      return System.nanoTime() - start;
     }
   }
 

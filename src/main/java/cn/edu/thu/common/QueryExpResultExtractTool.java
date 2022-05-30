@@ -69,15 +69,15 @@ public class QueryExpResultExtractTool {
 
     // -------------------------------------------
 
-    String file = "D:\\2\\IoTDB+align+SINGLE_SERIES_RAW_QUERY.txt";
-    String expStr = "IoTDB+SINGLE_SERIES_RAW_QUERY";
-    String output = "IoTDB+align+SINGLE_SERIES_RAW_QUERY.csv";
-    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+//    String file = "D:\\2\\IoTDB+align+SINGLE_SERIES_RAW_QUERY.txt";
+//    String expStr = "IoTDB+SINGLE_SERIES_RAW_QUERY";
+//    String output = "IoTDB+align+SINGLE_SERIES_RAW_QUERY.csv";
+//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
 
-//    String file = "D:\\2\\IoTDB+align+MULTI_SERIES_ALIGN_QUERY.txt";
-//    String expStr = "IoTDB+MULTI_SERIES_ALIGN_QUERY";
-//    String output = "IoTDB+align+MULTI_SERIES_ALIGN_QUERY.csv";
-//    int[] queryParameters = new int[]{1, 10, 100, 1000};
+    String file = "D:\\2\\IoTDB+align+MULTI_SERIES_ALIGN_QUERY.txt";
+    String expStr = "IoTDB+MULTI_SERIES_ALIGN_QUERY";
+    String output = "IoTDB+align+MULTI_SERIES_ALIGN_QUERY.csv";
+    int[] queryParameters = new int[]{1, 10, 100, 1000};
 
 //    String file = "D:\\2\\IoTDB+align+SINGLE_SERIES_COUNT_QUERY.txt";
 //    String expStr = "IoTDB+SINGLE_SERIES_COUNT_QUERY";
