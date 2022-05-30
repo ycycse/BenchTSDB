@@ -114,26 +114,28 @@ public class TimescaleDBManager implements IDataBaseManager {
     int c = 0; // total line number
     try (Statement statement = connection.createStatement()) {
       if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
-        /*
+        StringBuilder line = new StringBuilder();
         // use queue to store results to avoid JIT compiler loop unrolling
-        Queue<String> fifo = EvictingQueue.create(config.QUERY_RESULT_QUEUE_LINE_LIMIT);
+//        Queue<String> fifo = EvictingQueue.create(config.QUERY_RESULT_QUEUE_LINE_LIMIT);
         start = System.nanoTime();
         for (String sql : sqls) {
           ResultSet rs = statement.executeQuery(sql);
           while (rs.next()) {
             c++;
-            StringBuilder line = new StringBuilder();
+            line = new StringBuilder();
             for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
               // NOTE: Comparatively, IoTDB includes dataSet.next(). So here the process of extracting records is also included:
               line.append(rs.getObject(i));
-              line.append(",");
+//              line.append(",");
             }
-            fifo.add(line.toString());
+//            fifo.add(line.toString());
           }
         }
         elapsedTime = System.nanoTime() - start;
-        logger.info(fifo.toString());
-        */
+//        logger.info(fifo.toString());
+        logger.info("query result last line: {}", line.toString());
+
+        /*
         start = System.nanoTime();
         for (String sql : sqls) {
           ResultSet rs = statement.executeQuery(sql);
@@ -142,6 +144,7 @@ public class TimescaleDBManager implements IDataBaseManager {
           }
         }
         elapsedTime = System.nanoTime() - start;
+        */
       } else {
         start = System.nanoTime();
         for (String sql : sqls) {
