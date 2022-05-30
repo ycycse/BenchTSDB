@@ -189,7 +189,7 @@ public class InfluxDBManager implements IDataBaseManager {
             sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1601045811969000000";
             break;
           case 1000000:
-            sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1602131946370000000";
+            sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1604742917425000000";
             break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");

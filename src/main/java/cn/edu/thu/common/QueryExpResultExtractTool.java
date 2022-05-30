@@ -91,20 +91,20 @@ public class QueryExpResultExtractTool {
 
     // -------------------------------------------
 
-    String file = "D:\\2\\IoTDB+nonalign+SINGLE_SERIES_RAW_QUERY.txt";
-    String expStr = "IoTDB+SINGLE_SERIES_RAW_QUERY";
-    String output = "IoTDB+nonalign+SINGLE_SERIES_RAW_QUERY.csv";
-    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+//    String file = "D:\\2\\IoTDB+nonalign+SINGLE_SERIES_RAW_QUERY.txt";
+//    String expStr = "IoTDB+SINGLE_SERIES_RAW_QUERY";
+//    String output = "IoTDB+nonalign+SINGLE_SERIES_RAW_QUERY.csv";
+//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
 
 //    String file = "D:\\2\\IoTDB+nonalign+MULTI_SERIES_ALIGN_QUERY.txt";
 //    String expStr = "IoTDB+MULTI_SERIES_ALIGN_QUERY";
 //    String output = "IoTDB+nonalign+MULTI_SERIES_ALIGN_QUERY.csv";
 //    int[] queryParameters = new int[]{1, 10, 100, 1000};
 
-//    String file = "D:\\2\\IoTDB+nonalign+SINGLE_SERIES_COUNT_QUERY.txt";
-//    String expStr = "IoTDB+SINGLE_SERIES_COUNT_QUERY";
-//    String output = "IoTDB+nonalign+SINGLE_SERIES_COUNT_QUERY.csv";
-//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+    String file = "D:\\2\\IoTDB+nonalign+SINGLE_SERIES_COUNT_QUERY.txt";
+    String expStr = "IoTDB+SINGLE_SERIES_COUNT_QUERY";
+    String output = "IoTDB+nonalign+SINGLE_SERIES_COUNT_QUERY.csv";
+    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
 
 //    String file = "D:\\2\\IoTDB+nonalign+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
 //    String expStr = "IoTDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";

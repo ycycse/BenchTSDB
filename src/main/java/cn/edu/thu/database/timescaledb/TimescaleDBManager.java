@@ -220,7 +220,7 @@ public class TimescaleDBManager implements IDataBaseManager {
                 encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
             break;
           case 1000000:
-            res[1] = String.format("select count(%s) from %s where time<=1602131946370;",
+            res[1] = String.format("select count(%s) from %s where time<=1604742917425;",
                 encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
             break;
           default:

@@ -276,7 +276,7 @@ public class KairosDBManager implements IDataBaseManager {
             queryMap.put(QUERY_END_TIME, 1601045811969L + 1);
             break;
           case 1000000:
-            queryMap.put(QUERY_END_TIME, 1602131946370L + 1);
+            queryMap.put(QUERY_END_TIME, 1604742917425L + 1);
             break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");

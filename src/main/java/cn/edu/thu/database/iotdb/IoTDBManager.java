@@ -313,7 +313,7 @@ public class IoTDBManager implements IDataBaseManager {
             sql = "select count(collecttime) from root.T000100010002.90003 where time<=1601045811969";
             break;
           case 1000000:
-            sql = "select count(collecttime) from root.T000100010002.90003 where time<=1602131946370";
+            sql = "select count(collecttime) from root.T000100010002.90003 where time<=1604742917425";
             break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");
