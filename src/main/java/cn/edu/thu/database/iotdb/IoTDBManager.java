@@ -325,6 +325,9 @@ public class IoTDBManager implements IDataBaseManager {
           case 1000000:
             sql = "select count(collecttime) from root.T000100010002.90003 where time<=1604742917425";
             break;
+          case 100000000:
+            sql = "select count(collecttime) from root.T000100010002.90003 where time<=1993728579671";
+            break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");
             break;
@@ -334,16 +337,19 @@ public class IoTDBManager implements IDataBaseManager {
         // use yanchang dataset
         switch (config.QUERY_PARAM) { // note that the startTime is modified to align with influxdb group by time style
           case 1:
-            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023212859, 1605835996093), 1ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023212859, 1993732295961), 1ms)";
             break;
           case 100:
-            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023212800, 1605835996093), 100ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023212800, 1993732295961), 100ms)";
             break;
           case 10000:
-            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023210000, 1605835996093), 10000ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023210000, 1993732295961), 10000ms)";
             break;
           case 1000000:
-            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023000000, 1605835996093), 1000000ms)";
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023000000, 1993732295961), 1000000ms)";
+            break;
+          case 100000000:
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601000000000, 1993732295961), 100000000ms)";
             break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");

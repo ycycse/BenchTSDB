@@ -191,6 +191,9 @@ public class InfluxDBManager implements IDataBaseManager {
           case 1000000:
             sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1604742917425000000";
             break;
+          case 100000000:
+            sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1993728579671000000";
+            break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");
             break;
@@ -201,7 +204,7 @@ public class InfluxDBManager implements IDataBaseManager {
         queryDatabase = "yanchang";
         sql = String.format(
             "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' "
-                + "and time>=1601023212859000000 and time<=1605835996092000000 group by time(%dms)",
+                + "and time>=1601023212859000000 and time<=1993732295960000000 group by time(%dms)",
             config.QUERY_PARAM);
         break;
       default:

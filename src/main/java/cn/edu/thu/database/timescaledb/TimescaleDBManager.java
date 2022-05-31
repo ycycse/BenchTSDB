@@ -234,6 +234,10 @@ public class TimescaleDBManager implements IDataBaseManager {
             res[1] = String.format("select count(%s) from %s where time<=1604742917425;",
                 encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
             break;
+          case 100000000:
+            res[1] = String.format("select count(%s) from %s where time<=1993728579671;",
+                encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
+            break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");
             break;
@@ -253,25 +257,31 @@ public class TimescaleDBManager implements IDataBaseManager {
             res[1] = String
                 .format(sqlFormat, encapName("collecttime"),
                     encapName(tagOneToMore("root.T000100010002.90003", 1)),
-                    1601023212859L, 1605835996093L, 1);
+                    1601023212859L, 1993732295961L, 1);
             break;
           case 100:
             res[1] = String
                 .format(sqlFormat, encapName("collecttime"),
                     encapName(tagOneToMore("root.T000100010002.90003", 1)),
-                    1601023212800L, 1605835996093L, 100);
+                    1601023212800L, 1993732295961L, 100);
             break;
           case 10000:
             res[1] = String
                 .format(sqlFormat, encapName("collecttime"),
                     encapName(tagOneToMore("root.T000100010002.90003", 1)),
-                    1601023210000L, 1605835996093L, 10000);
+                    1601023210000L, 1993732295961L, 10000);
             break;
           case 1000000:
             res[1] = String
                 .format(sqlFormat, encapName("collecttime"),
                     encapName(tagOneToMore("root.T000100010002.90003", 1)),
-                    1601023000000L, 1605835996093L, 1000000);
+                    1601023000000L, 1993732295961L, 1000000);
+            break;
+          case 100000000:
+            res[1] = String
+                .format(sqlFormat, encapName("collecttime"),
+                    encapName(tagOneToMore("root.T000100010002.90003", 1)),
+                    1601000000000L, 1993732295961L, 100000000);
             break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");

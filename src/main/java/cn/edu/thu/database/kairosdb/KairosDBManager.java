@@ -230,7 +230,7 @@ public class KairosDBManager implements IDataBaseManager {
       case "SINGLE_SERIES_RAW_QUERY":
         // select collecttime from root.T000100010002.90003 limit %d
         queryMap.put(QUERY_START_TIME, 1601023212859L);
-
+        queryMap.put(QUERY_END_TIME, 1993732295961L);
         List<Map<String, Object>> subQueries = new ArrayList<>();
         Map<String, Object> subQuery = new HashMap<>();
         subQuery.put("name", "collecttime");
@@ -277,6 +277,9 @@ public class KairosDBManager implements IDataBaseManager {
             break;
           case 1000000:
             queryMap.put(QUERY_END_TIME, 1604742917425L + 1);
+            break;
+          case 100000000:
+            queryMap.put(QUERY_END_TIME, 1993728579671L + 1);
             break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");
@@ -343,11 +346,14 @@ public class KairosDBManager implements IDataBaseManager {
           case 1000000:
             queryMap.put(QUERY_START_TIME, 1601023000000L);
             break;
+          case 100000000:
+            queryMap.put(QUERY_START_TIME, 1601000000000L);
+            break;
           default:
             logger.error("QUERY_PARAM not correct! Please check your configurations.");
             break;
         }
-        queryMap.put(QUERY_END_TIME, 1605835996093L);
+        queryMap.put(QUERY_END_TIME, 1993732295961L);
         subQueries.add(subQuery);
         queryMap.put("metrics", subQueries);
         break;
