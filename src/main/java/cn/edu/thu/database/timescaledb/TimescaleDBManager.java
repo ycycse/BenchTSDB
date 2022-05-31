@@ -111,7 +111,7 @@ public class TimescaleDBManager implements IDataBaseManager {
 
     long start = 0;
     long elapsedTime = 0;
-    int c = 0; // total line number
+    long c = 0; // total line number
     try (Statement statement = connection.createStatement()) {
       if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
         StringBuilder line = new StringBuilder();

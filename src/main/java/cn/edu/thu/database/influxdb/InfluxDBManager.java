@@ -70,7 +70,7 @@ public class InfluxDBManager implements IDataBaseManager {
 
     // begin execution
     final BlockingQueue<QueryResult> queue = new LinkedBlockingQueue<>();
-    int cnt = 0;
+    long cnt = 0;
     QueryResult result;
     long start = 0;
     long elapsedTime = 0;

@@ -197,7 +197,7 @@ public class KairosDBManager implements IDataBaseManager {
     String json = generateQuery();
     logger.info("Begin query：{}", json);
 
-    int resStrLen = 0;
+    long resStrLen = 0;
     long start = 0;
     long elapsedTime = 0;
     if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {

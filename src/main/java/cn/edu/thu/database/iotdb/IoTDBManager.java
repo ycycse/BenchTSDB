@@ -239,7 +239,7 @@ public class IoTDBManager implements IDataBaseManager {
     String sql = generateQuery();
     logger.info("Begin query: {}", sql);
     session.setFetchSize(config.IOTDB_QUERY_SESSION_FETCH_SIZE);
-    int c = 0; // total line number
+    long c = 0; // total line number
     long start = 0;
     long elapsedTime = 0;
     if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
