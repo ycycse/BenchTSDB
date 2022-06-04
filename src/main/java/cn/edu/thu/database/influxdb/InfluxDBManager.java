@@ -117,7 +117,7 @@ public class InfluxDBManager implements IDataBaseManager {
           queue::add); // note influxdb chunking query is async.
       try {
         do {
-          result = queue.poll(20, TimeUnit.SECONDS);
+          result = queue.poll(100, TimeUnit.SECONDS);
           if (result.getError() != null) {
             break;
           }
