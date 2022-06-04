@@ -84,6 +84,10 @@ public class InfluxDBManager implements IDataBaseManager {
       try {
         do {
           result = queue.poll(100, TimeUnit.SECONDS);
+          if (result == null) {
+            logger.error(
+                "Result null! Maybe the influxdb query poll timeout is too short to get the result.");
+          }
           if (result.getError() != null) {
             break;
           }
@@ -118,6 +122,10 @@ public class InfluxDBManager implements IDataBaseManager {
       try {
         do {
           result = queue.poll(100, TimeUnit.SECONDS);
+          if (result == null) {
+            logger.error(
+                "Result null! Maybe the influxdb query poll timeout is too short to get the result.");
+          }
           if (result.getError() != null) {
             break;
           }
