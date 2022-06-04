@@ -44,8 +44,10 @@ public class InfluxDBManager implements IDataBaseManager {
         .readTimeout(5, TimeUnit.MINUTES)
         .writeTimeout(5, TimeUnit.MINUTES)
         .retryOnConnectionFailure(true);
-
     influxDB = InfluxDBFactory.connect(config.INFLUXDB_URL, okHttpClientBuilder);
+    if (influxDB == null) {
+      logger.error("influxdb connection failed! Maybe the server has not finished start up.");
+    }
     database = config.INFLUXDB_DATABASE;
   }
 
@@ -81,7 +83,7 @@ public class InfluxDBManager implements IDataBaseManager {
           queue::add); // note influxdb chunking query is async.
       try {
         do {
-          result = queue.poll(20, TimeUnit.SECONDS);
+          result = queue.poll(100, TimeUnit.SECONDS);
           if (result.getError() != null) {
             break;
           }

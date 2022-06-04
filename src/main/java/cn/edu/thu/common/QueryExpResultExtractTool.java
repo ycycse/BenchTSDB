@@ -28,7 +28,7 @@ public class QueryExpResultExtractTool {
 //    String file = "D:\\2\\TimescaleDB+SINGLE_SERIES_RAW_QUERY.txt";
 //    String expStr = "TimescaleDB+SINGLE_SERIES_RAW_QUERY";
 //    String output = expStr + ".csv";
-//    int[] queryParameters = new int[]{1, 100, 10000, 100000, 1000000};
+//    int[] queryParameters = new int[]{1, 10000, 1000000, 100000000};
 
 //    String file = "D:\\2\\TimescaleDB+MULTI_SERIES_ALIGN_QUERY.txt";
 //    String expStr = "TimescaleDB+MULTI_SERIES_ALIGN_QUERY";
@@ -38,34 +38,34 @@ public class QueryExpResultExtractTool {
 //    String file = "D:\\2\\TimescaleDB+SINGLE_SERIES_COUNT_QUERY.txt";
 //    String expStr = "TimescaleDB+SINGLE_SERIES_COUNT_QUERY";
 //    String output = expStr + ".csv";
-//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+//    int[] queryParameters = new int[]{1, 10000, 1000000, 100000000};
 
 //    String file = "D:\\2\\TimescaleDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
 //    String expStr = "TimescaleDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
 //    String output = expStr + ".csv";
-//    int[] queryParameters = new int[]{1000000, 10000, 100, 1};
+//    int[] queryParameters = new int[]{100, 10000, 1000000, 100000000};
 
     // -------------------------------------------
 
 //    String file = "D:\\2\\InfluxDB+SINGLE_SERIES_RAW_QUERY.txt";
 //    String expStr = "InfluxDB+SINGLE_SERIES_RAW_QUERY";
 //    String output = expStr + ".csv";
-//    int[] queryParameters = new int[]{1, 100, 10000, 100000, 1000000};
+//    int[] queryParameters = new int[]{1, 10000, 1000000, 100000000};
 
 //    String file = "D:\\2\\InfluxDB+MULTI_SERIES_ALIGN_QUERY.txt";
 //    String expStr = "InfluxDB+MULTI_SERIES_ALIGN_QUERY";
 //    String output = expStr + ".csv";
 //    int[] queryParameters = new int[]{1, 10, 100, 1000};
-
+//
 //    String file = "D:\\2\\InfluxDB+SINGLE_SERIES_COUNT_QUERY.txt";
 //    String expStr = "InfluxDB+SINGLE_SERIES_COUNT_QUERY";
 //    String output = expStr + ".csv";
-//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+//    int[] queryParameters = new int[]{1, 10000, 1000000, 100000000};
 
-//    String file = "D:\\2\\InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
-//    String expStr = "InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
-//    String output = expStr + ".csv";
-//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+    String file = "D:\\2\\InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
+    String expStr = "InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
+    String output = expStr + ".csv";
+    int[] queryParameters = new int[]{100, 10000, 1000000, 100000000};
 
     // -------------------------------------------
 
@@ -87,7 +87,7 @@ public class QueryExpResultExtractTool {
 //    String file = "D:\\2\\IoTDB+align+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
 //    String expStr = "IoTDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
 //    String output = "IoTDB+align+SINGLE_SERIES_DOWNSAMPLING_QUERY.csv";
-//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+//    int[] queryParameters = new int[]{100, 10000, 1000000, 100000000};
 
     // -------------------------------------------
 
@@ -106,17 +106,17 @@ public class QueryExpResultExtractTool {
 //    String output = "IoTDB+nonalign+SINGLE_SERIES_COUNT_QUERY.csv";
 //    int[] queryParameters = new int[]{1, 10000, 1000000, 100000000};
 
-    String file = "D:\\2\\IoTDB+nonalign+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
-    String expStr = "IoTDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
-    String output = "IoTDB+nonalign+SINGLE_SERIES_DOWNSAMPLING_QUERY.csv";
-    int[] queryParameters = new int[]{100, 10000, 1000000, 100000000};
+//    String file = "D:\\2\\IoTDB+nonalign+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
+//    String expStr = "IoTDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
+//    String output = "IoTDB+nonalign+SINGLE_SERIES_DOWNSAMPLING_QUERY.csv";
+//    int[] queryParameters = new int[]{100, 10000, 1000000, 100000000};
 
     // -------------------------------------------
 
 //    String file = "D:\\2\\KairosDB+SINGLE_SERIES_RAW_QUERY.txt";
 //    String expStr = "KairosDB+SINGLE_SERIES_RAW_QUERY";
 //    String output = expStr + ".csv";
-//    int[] queryParameters = new int[]{1, 100, 10000, 100000, 1000000};
+//    int[] queryParameters = new int[]{1, 10000, 1000000, 100000000};
 
 //    String file = "D:\\2\\KairosDB+MULTI_SERIES_ALIGN_QUERY.txt";
 //    String expStr = "KairosDB+MULTI_SERIES_ALIGN_QUERY";
@@ -126,12 +126,12 @@ public class QueryExpResultExtractTool {
 //    String file = "D:\\2\\KairosDB+SINGLE_SERIES_COUNT_QUERY.txt";
 //    String expStr = "KairosDB+SINGLE_SERIES_COUNT_QUERY";
 //    String output = expStr + ".csv";
-//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+//    int[] queryParameters = new int[]{1, 10000, 1000000, 100000000};
 
 //    String file = "D:\\2\\KairosDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
 //    String expStr = "KairosDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
 //    String output = expStr + ".csv";
-//    int[] queryParameters = new int[]{1, 100, 10000, 1000000};
+//    int[] queryParameters = new int[]{100, 10000, 1000000, 100000000};
 
     String expNameFormat = "\"%s_%d\""; // the double quote is important to distinguish different parameters
     int repeatNumber = 5; // 每个查询参数的实验重复次数
