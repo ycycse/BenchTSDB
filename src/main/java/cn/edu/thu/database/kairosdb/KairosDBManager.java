@@ -205,7 +205,7 @@ public class KairosDBManager implements IDataBaseManager {
       try {
 //        String res = ThuHttpRequest.sendPost(queryUrl, json);
 //        resStrLen = res.length();
-        resStrLen = ThuHttpRequest.sendPostWithoutRes(queryUrl, json); // actually res line number
+        resStrLen = ThuHttpRequest.sendPostByChunk(queryUrl, json); // actually res line number
         // use sendPostWithoutRes instead of senPost to avoid out of java heap space
       } catch (IOException e) {
         e.printStackTrace();

@@ -116,7 +116,7 @@ public class ThuHttpRequest {
     return result;
   }
 
-  public static long sendPostWithoutRes(String url, String param) throws IOException {
+  public static long sendPostByChunk(String url, String param) throws IOException {
     PrintWriter out = null;
     BufferedReader in = null;
     long cnt = 0;
@@ -141,11 +141,13 @@ public class ThuHttpRequest {
       // flush输出流的缓冲
       out.flush();
       // 定义BufferedReader输入流来读取URL的响应
-      in = new BufferedReader(
-          new InputStreamReader(conn.getInputStream()));
+      in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
       String line;
-      while ((line = in.readLine()) != null) {
-        cnt++;
+      char[] myBuffer = new char[1024];
+//      while ((line = in.readLine()) != null) { // OutOfMemoryError: You are using `readLine()` on a file that doesn't have lines. So it tries to read the entire file as a single lines. This does not scale.
+      int chunkLen = 0;
+      while ((chunkLen = in.read(myBuffer, 0, 1024)) != -1) {
+        cnt += chunkLen;
       }
     } catch (Exception e) {
       throw e;
