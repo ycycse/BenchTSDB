@@ -101,6 +101,7 @@ public class TimescaleDBManager implements IDataBaseManager {
     try {
       connection = DriverManager.getConnection(queryURL, config.TIMESCALEDB_USERNAME,
           config.TIMESCALEDB_PASSWORD);
+      connection.setAutoCommit(false);
     } catch (Exception e) {
       logger.error("Initialize TimescaleDB failed because ", e);
     }
@@ -114,6 +115,7 @@ public class TimescaleDBManager implements IDataBaseManager {
     long lineNum = 0; // total line number
     long pointNum = 0; // total points
     try (Statement statement = connection.createStatement()) {
+      statement.setFetchSize(config.TIMESCALEDB_QUERY_FETCH_SIZE);
       if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
 //        StringBuilder line = new StringBuilder();
         // use queue to store results to avoid JIT compiler loop unrolling
@@ -125,7 +127,7 @@ public class TimescaleDBManager implements IDataBaseManager {
             lineNum++;
 //            line = new StringBuilder();
             for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
-              pointNum++;
+              pointNum++; // including time column
               // NOTE: Comparatively, IoTDB includes dataSet.next(). So here the process of extracting records is also included:
 //              line.append(rs.getObject(i)); // seems leading to GC problem
 //              line.append(",");

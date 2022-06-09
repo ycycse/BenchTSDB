@@ -80,6 +80,7 @@ public class Config {
   public String TIMESCALEDB_PASSWORD = "123";
   public long TIMESCALEDB_CHUNK_TIME_INTERVAL = 604800000000L;
   public String TIMESCALEDB_DATABASE = "mydb";
+  public int TIMESCALEDB_QUERY_FETCH_SIZE = 5000;
 
   public String SUMMARYSTORE_PATH = "sstore";
 
@@ -206,6 +207,9 @@ public class Config {
         .toString());
     TIMESCALEDB_DATABASE = properties.getOrDefault("TIMESCALEDB_DATABASE", TIMESCALEDB_DATABASE)
         .toString();
+    TIMESCALEDB_QUERY_FETCH_SIZE = Integer.parseInt(
+        properties.getOrDefault("TIMESCALEDB_QUERY_FETCH_SIZE", TIMESCALEDB_QUERY_FETCH_SIZE)
+            .toString());
 
     OPENTSDB_URL = properties.getOrDefault("OPENTSDB_URL", OPENTSDB_URL).toString();
     WATERWHEEL_IP = properties.getOrDefault("WATERWHEEL_IP", WATERWHEEL_IP).toString();
