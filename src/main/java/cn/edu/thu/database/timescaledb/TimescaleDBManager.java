@@ -111,21 +111,23 @@ public class TimescaleDBManager implements IDataBaseManager {
 
     long start = 0;
     long elapsedTime = 0;
-    long c = 0; // total line number
+    long lineNum = 0; // total line number
+    long pointNum = 0; // total points
     try (Statement statement = connection.createStatement()) {
       if (!config.QUERY_RESULT_PRINT_FOR_DEBUG) {
-        StringBuilder line = new StringBuilder();
+//        StringBuilder line = new StringBuilder();
         // use queue to store results to avoid JIT compiler loop unrolling
 //        Queue<String> fifo = EvictingQueue.create(config.QUERY_RESULT_QUEUE_LINE_LIMIT);
         start = System.nanoTime();
         for (String sql : sqls) {
           ResultSet rs = statement.executeQuery(sql);
           while (rs.next()) {
-            c++;
-            line = new StringBuilder();
+            lineNum++;
+//            line = new StringBuilder();
             for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+              pointNum++;
               // NOTE: Comparatively, IoTDB includes dataSet.next(). So here the process of extracting records is also included:
-              line.append(rs.getObject(i));
+//              line.append(rs.getObject(i)); // seems leading to GC problem
 //              line.append(",");
             }
 //            fifo.add(line.toString());
@@ -133,7 +135,7 @@ public class TimescaleDBManager implements IDataBaseManager {
         }
         elapsedTime = System.nanoTime() - start;
 //        logger.info(fifo.toString());
-        logger.info("query result last line: {}", line.toString());
+//        logger.info("query result last line: {}", line.toString());
 
         /*
         start = System.nanoTime();
@@ -150,9 +152,10 @@ public class TimescaleDBManager implements IDataBaseManager {
         for (String sql : sqls) {
           ResultSet rs = statement.executeQuery(sql);
           while (rs.next()) {
-            c++;
+            lineNum++;
             StringBuilder line = new StringBuilder();
             for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+              pointNum++;
               line.append(rs.getObject(i));
               line.append(",");
             }
@@ -166,7 +169,8 @@ public class TimescaleDBManager implements IDataBaseManager {
       logger.error("meet error when writing: {}", e.getMessage());
     }
 
-    logger.info("Query finished. Total lines: {}. Query Number: {}", c, sqls.length);
+    logger.info("Query finished. Total lines: {}. Total points: {}. Query Number: {}", lineNum,
+        pointNum, sqls.length);
     for (int n = 1; n <= sqls.length; n++) {
       logger.info("SQL{}: {}", n, sqls[n - 1]);
     }
