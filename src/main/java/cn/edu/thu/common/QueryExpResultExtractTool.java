@@ -62,10 +62,10 @@ public class QueryExpResultExtractTool {
 //    String output = expStr + ".csv";
 //    int[] queryParameters = new int[]{1, 10000, 1000000, 100000000};
 
-    String file = "D:\\2\\InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
-    String expStr = "InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
-    String output = expStr + ".csv";
-    int[] queryParameters = new int[]{100, 10000, 1000000, 100000000};
+//    String file = "D:\\2\\InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
+//    String expStr = "InfluxDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
+//    String output = expStr + ".csv";
+//    int[] queryParameters = new int[]{100, 10000, 1000000, 100000000};
 
     // -------------------------------------------
 
@@ -128,10 +128,10 @@ public class QueryExpResultExtractTool {
 //    String output = expStr + ".csv";
 //    int[] queryParameters = new int[]{1, 10000, 1000000, 100000000};
 
-//    String file = "D:\\2\\KairosDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
-//    String expStr = "KairosDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
-//    String output = expStr + ".csv";
-//    int[] queryParameters = new int[]{100, 10000, 1000000, 100000000};
+    String file = "D:\\2\\KairosDB+SINGLE_SERIES_DOWNSAMPLING_QUERY.txt";
+    String expStr = "KairosDB+SINGLE_SERIES_DOWNSAMPLING_QUERY";
+    String output = expStr + ".csv";
+    int[] queryParameters = new int[]{100, 10000, 1000000, 100000000};
 
     String expNameFormat = "\"%s_%d\""; // the double quote is important to distinguish different parameters
     int repeatNumber = 5; // 每个查询参数的实验重复次数

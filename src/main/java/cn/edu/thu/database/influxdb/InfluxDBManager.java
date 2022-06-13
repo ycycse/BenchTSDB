@@ -198,8 +198,14 @@ public class InfluxDBManager implements IDataBaseManager {
           case 10000:
             sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1601045811969000000";
             break;
+          case 100000:
+            sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1601136597344000000";
+            break;
           case 1000000:
             sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1604742917425000000";
+            break;
+          case 10000000:
+            sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1640035162526000000";
             break;
           case 100000000:
             sql = "select count(collecttime) from tb1 where deviceId='root.T000100010002.90003' and time<=1993728579671000000";

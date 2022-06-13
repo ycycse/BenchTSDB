@@ -236,8 +236,16 @@ public class TimescaleDBManager implements IDataBaseManager {
             res[1] = String.format("select count(%s) from %s where time<=1601045811969;",
                 encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
             break;
+          case 100000:
+            res[1] = String.format("select count(%s) from %s where time<=1601136597344;",
+                encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
+            break;
           case 1000000:
             res[1] = String.format("select count(%s) from %s where time<=1604742917425;",
+                encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
+            break;
+          case 10000000:
+            res[1] = String.format("select count(%s) from %s where time<=1640035162526;",
                 encapName("collecttime"), encapName(tagOneToMore("root.T000100010002.90003", 1)));
             break;
           case 100000000:
@@ -277,11 +285,23 @@ public class TimescaleDBManager implements IDataBaseManager {
                     encapName(tagOneToMore("root.T000100010002.90003", 1)),
                     1601023210000L, 1993732295961L, 10000);
             break;
+          case 100000:
+            res[1] = String
+                .format(sqlFormat, encapName("collecttime"),
+                    encapName(tagOneToMore("root.T000100010002.90003", 1)),
+                    1601023200000L, 1993732295961L, 100000);
+            break;
           case 1000000:
             res[1] = String
                 .format(sqlFormat, encapName("collecttime"),
                     encapName(tagOneToMore("root.T000100010002.90003", 1)),
                     1601023000000L, 1993732295961L, 1000000);
+            break;
+          case 10000000:
+            res[1] = String
+                .format(sqlFormat, encapName("collecttime"),
+                    encapName(tagOneToMore("root.T000100010002.90003", 1)),
+                    1601020000000L, 1993732295961L, 10000000);
             break;
           case 100000000:
             res[1] = String

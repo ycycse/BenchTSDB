@@ -322,8 +322,14 @@ public class IoTDBManager implements IDataBaseManager {
           case 10000:
             sql = "select count(collecttime) from root.T000100010002.90003 where time<=1601045811969";
             break;
+          case 100000:
+            sql = "select count(collecttime) from root.T000100010002.90003 where time<=1601136597344";
+            break;
           case 1000000:
             sql = "select count(collecttime) from root.T000100010002.90003 where time<=1604742917425";
+            break;
+          case 10000000:
+            sql = "select count(collecttime) from root.T000100010002.90003 where time<=1640035162526";
             break;
           case 100000000:
             sql = "select count(collecttime) from root.T000100010002.90003 where time<=1993728579671";
@@ -345,8 +351,14 @@ public class IoTDBManager implements IDataBaseManager {
           case 10000:
             sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023210000, 1993732295961), 10000ms)";
             break;
+          case 100000:
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023200000, 1993732295961), 100000ms)";
+            break;
           case 1000000:
             sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601023000000, 1993732295961), 1000000ms)";
+            break;
+          case 10000000:
+            sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601020000000, 1993732295961), 10000000ms)";
             break;
           case 100000000:
             sql = "select count(collecttime) from root.T000100010002.90003 group by ([1601000000000, 1993732295961), 100000000ms)";

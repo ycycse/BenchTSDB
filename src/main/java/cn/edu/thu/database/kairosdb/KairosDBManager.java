@@ -277,8 +277,14 @@ public class KairosDBManager implements IDataBaseManager {
           case 10000:
             queryMap.put(QUERY_END_TIME, 1601045811969L + 1);
             break;
+          case 100000:
+            queryMap.put(QUERY_END_TIME, 1601136597344L + 1);
+            break;
           case 1000000:
             queryMap.put(QUERY_END_TIME, 1604742917425L + 1);
+            break;
+          case 10000000:
+            queryMap.put(QUERY_END_TIME, 1640035162526L + 1);
             break;
           case 100000000:
             queryMap.put(QUERY_END_TIME, 1993728579671L + 1);
@@ -345,8 +351,14 @@ public class KairosDBManager implements IDataBaseManager {
           case 10000:
             queryMap.put(QUERY_START_TIME, 1601023210000L);
             break;
+          case 100000:
+            queryMap.put(QUERY_START_TIME, 1601023200000L);
+            break;
           case 1000000:
             queryMap.put(QUERY_START_TIME, 1601023000000L);
+            break;
+          case 10000000:
+            queryMap.put(QUERY_START_TIME, 1601020000000L);
             break;
           case 100000000:
             queryMap.put(QUERY_START_TIME, 1601000000000L);
