@@ -1,3 +1,5 @@
+BenchTSDB里写入代码逻辑是：Main->MainLoad->多线程RealDatasetWriter->CSVReader负责读取csv文件，逐行转换成Record，然后一批次的records交给IoTDBManager.insertBatch来写入
+
 # 写入测试
 
 pom 中指定主类 cn.edu.thu.MainLoad
