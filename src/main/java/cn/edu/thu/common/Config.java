@@ -242,10 +242,10 @@ public class Config {
 
     useAlignedTablet = Boolean.parseBoolean(properties.getOrDefault("use_aligned_tablet",
         useAlignedTablet).toString());
-    // TODO NonAlignedTablet related
-    if (!useAlignedTablet) {
-      throw new IOException("not supported mode: NonAlignedTablet");
-    }
+//    // TODO NonAlignedTablet related
+//    if (!useAlignedTablet) {
+//      throw new IOException("not supported mode: NonAlignedTablet");
+//    }
 
     useAlignedSeries = Boolean.parseBoolean(properties.getOrDefault("use_aligned_series",
         useAlignedSeries).toString());
