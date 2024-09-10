@@ -192,11 +192,12 @@ public class CSVReader extends BasicReader {
       tag = split[1].substring(0, devicePos);
     }
 
-    schema.setTag(tag);
+    schema.setTag(formatString(tag));
+
     for (int i = 1; i < split.length; i++) {
       String columnName = split[i];
       String measurement = devicePos != -1 ? columnName.substring(devicePos + 1) : columnName;
-      schema.getFields()[i - 1] = measurement;
+      schema.getFields()[i - 1] = formatString(measurement);
       schema.getPrecision()[i - 1] = defaultPrecision;
       // get type info
       if (typeMap == null) {
@@ -247,6 +248,36 @@ public class CSVReader extends BasicReader {
     }
   }
 
+  public String formatString(String input) {
+//    - Tsbs: root.diskio.host_9.writes(INT64)
+//    - Zhongche: root.group_69.1701.ZT12029
+//    - Tianyuan: root.cty.trans.07.1001202307.1001202307.TY_0001_00_6
+//    - Zhongyan: root.T000100010002.90401.struct@waste%105006, root.T000100010002.90003.TotalWastePct-123
+
+    // 1. 用正则表达式替换特殊字符 ( ) % @ - 为字母a
+    String modifiedString = input.replaceAll("[()@%\\-]", "a");
+
+    // 2. 用点分割字符串
+    String[] parts = modifiedString.split("\\.");
+
+    // 3. 创建StringBuilder存储最终结果
+    StringBuilder result = new StringBuilder();
+
+    // 4. 处理每个部分，root保持不变，其余部分添加前缀a
+    for (int i = 0; i < parts.length; i++) {
+      if (parts[i].equals("root")) {
+        // root保持不变
+        result.append(parts[i]);
+      } else if (i > 0) { // 排除第一个
+        // 其他部分前面加字母a
+        result.append(".a").append(parts[i]);
+      } else { // 第一个且不是root
+        result.append("a").append(parts[i]);
+      }
+    }
+
+    return result.toString();
+  }
 
   private Schema convertHeaderToSchema(String headerLine, BufferedReader reader, String fileName,
       boolean fillCache)
@@ -267,11 +298,12 @@ public class CSVReader extends BasicReader {
       tag = split[1].substring(0, devicePos);
     }
 
-    schema.setTag(tag);
+    schema.setTag(formatString(tag));
+
     for (int i = 1; i < split.length; i++) {
       String columnName = split[i];
       String measurement = devicePos != -1 ? columnName.substring(devicePos + 1) : columnName;
-      schema.getFields()[i - 1] = measurement;
+      schema.getFields()[i - 1] = formatString(measurement);
       schema.getPrecision()[i - 1] = defaultPrecision;
     }
 
