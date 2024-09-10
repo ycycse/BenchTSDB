@@ -122,7 +122,7 @@ public class Config {
 //    public long START_TIME = 0L;
 //    public long END_TIME = 1946816515000L;
 
-  public Config() {
+  public Config() throws IOException {
     Properties properties = new Properties();
     properties.putAll(System.getenv());
     load(properties);
@@ -147,7 +147,7 @@ public class Config {
   }
 
 
-  private void load(Properties properties) {
+  private void load(Properties properties) throws IOException {
     EXP_NAME = properties.getOrDefault("EXP_NAME", EXP_NAME).toString();
 
     DATABASE = properties.getOrDefault("DATABASE", DATABASE).toString();
@@ -242,6 +242,11 @@ public class Config {
 
     useAlignedTablet = Boolean.parseBoolean(properties.getOrDefault("use_aligned_tablet",
         useAlignedTablet).toString());
+    // TODO NonAlignedTablet related
+    if (!useAlignedTablet) {
+      throw new IOException("not supported mode: NonAlignedTablet");
+    }
+
     useAlignedSeries = Boolean.parseBoolean(properties.getOrDefault("use_aligned_series",
         useAlignedSeries).toString());
 

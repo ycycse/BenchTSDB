@@ -19,22 +19,23 @@
 
 package cn.edu.thu.meta;
 
-import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
-import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.TsFileReader;
-import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
-import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.read.expression.IExpression;
-import org.apache.iotdb.tsfile.read.expression.QueryExpression;
-import org.apache.iotdb.tsfile.read.expression.impl.SingleSeriesExpression;
-import org.apache.iotdb.tsfile.read.filter.TimeFilter;
-import org.apache.iotdb.tsfile.read.filter.operator.AndFilter;
-import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
-import org.apache.iotdb.tsfile.write.TsFileWriter;
-import org.apache.iotdb.tsfile.write.record.Tablet;
-import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
+import org.apache.tsfile.encoding.encoder.Encoder;
+import org.apache.tsfile.file.metadata.enums.CompressionType;
+import org.apache.tsfile.enums.TSDataType;
+import org.apache.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.tsfile.read.TsFileReader;
+import org.apache.tsfile.read.TsFileSequenceReader;
+import org.apache.tsfile.read.common.Path;
+import org.apache.tsfile.read.expression.IExpression;
+import org.apache.tsfile.read.expression.QueryExpression;
+import org.apache.tsfile.read.expression.impl.SingleSeriesExpression;
+import org.apache.tsfile.read.filter.basic.TimeFilter;
+import org.apache.tsfile.read.filter.operator.And;
+import org.apache.tsfile.read.query.dataset.QueryDataSet;
+import org.apache.tsfile.write.TsFileWriter;
+import org.apache.tsfile.write.record.Tablet;
+import org.apache.tsfile.write.schema.IMeasurementSchema;
+import org.apache.tsfile.write.schema.MeasurementSchema;
 
 import cn.edu.thu.common.Record;
 import org.slf4j.Logger;
@@ -55,7 +56,7 @@ public class TsFileTester implements Tester {
 
   private File file;
   private TsFileWriter writer;
-  private List<MeasurementSchema> schemas = new ArrayList<>();
+  private List<IMeasurementSchema> schemas = new ArrayList<>();
 
   public TsFileTester(int sensorNumber) {
     this.sensorNumber = sensorNumber;
@@ -63,7 +64,7 @@ public class TsFileTester implements Tester {
     file = new File("meta.tsfile");
     try {
       writer = new TsFileWriter(file);
-      Map<String, MeasurementSchema> template = new HashMap<>();
+      Map<String, IMeasurementSchema> template = new HashMap<>();
       for (int i = 0; i < sensorNumber; i++) {
         Map<String, String> props = new HashMap<>();
         props.put(Encoder.MAX_POINT_NUMBER, 6 + "");
@@ -117,29 +118,31 @@ public class TsFileTester implements Tester {
   public float query() {
     long start = System.nanoTime();
 
-    try {
-      TsFileSequenceReader reader = new TsFileSequenceReader("meta.tsfile");
+    // TODO not used in database writing and querying experiments, so commented out
 
-      TsFileReader readTsFile = new TsFileReader(reader);
-      ArrayList<Path> paths = new ArrayList<>();
-      paths.add(new Path("device", "s1"));
-      IExpression filter = new SingleSeriesExpression(new Path("device.s1"),
-          new AndFilter(TimeFilter.gtEq(0), TimeFilter.ltEq(1946816515000L)));
-
-      QueryExpression queryExpression = QueryExpression.create(paths, filter);
-
-      QueryDataSet queryDataSet = readTsFile.query(queryExpression);
-
-      int i = 0;
-      while (queryDataSet.hasNext()) {
-        i++;
-        queryDataSet.next();
-      }
-
-      logger.info("TsFile count result: {}", i);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
+//    try {
+//      TsFileSequenceReader reader = new TsFileSequenceReader("meta.tsfile");
+//
+//      TsFileReader readTsFile = new TsFileReader(reader);
+//      ArrayList<Path> paths = new ArrayList<>();
+//      paths.add(new Path("device", "s1"));
+//      IExpression filter = new SingleSeriesExpression(new Path("device.s1"),
+//          new And(TimeFilter.gtEq(0), TimeFilter.ltEq(1946816515000L)));
+//
+//      QueryExpression queryExpression = QueryExpression.create(paths, filter);
+//
+//      QueryDataSet queryDataSet = readTsFile.query(queryExpression);
+//
+//      int i = 0;
+//      while (queryDataSet.hasNext()) {
+//        i++;
+//        queryDataSet.next();
+//      }
+//
+//      logger.info("TsFile count result: {}", i);
+//    } catch (IOException e) {
+//      e.printStackTrace();
+//    }
 
     return (float) (System.nanoTime() - start) / 1000_000F;
   }

@@ -8,19 +8,20 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.iotdb.isession.SessionDataSet;
+import org.apache.iotdb.isession.SessionDataSet.DataIterator;
 import org.apache.iotdb.rpc.IoTDBConnectionException;
 import org.apache.iotdb.session.Session;
-import org.apache.iotdb.session.SessionDataSet;
-import org.apache.iotdb.session.SessionDataSet.DataIterator;
-import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
-import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.common.RowRecord;
-import org.apache.iotdb.tsfile.utils.Binary;
-import org.apache.iotdb.tsfile.utils.BitMap;
-import org.apache.iotdb.tsfile.write.record.Tablet;
-import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
+import org.apache.tsfile.encoding.encoder.Encoder;
+import org.apache.tsfile.enums.TSDataType;
+import org.apache.tsfile.file.metadata.enums.CompressionType;
+import org.apache.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.tsfile.read.common.RowRecord;
+import org.apache.tsfile.utils.Binary;
+import org.apache.tsfile.utils.BitMap;
+import org.apache.tsfile.write.record.Tablet;
+import org.apache.tsfile.write.schema.IMeasurementSchema;
+import org.apache.tsfile.write.schema.MeasurementSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -148,7 +149,7 @@ public class IoTDBManager implements IDataBaseManager {
   }
 
   private Tablet convertToTablet(List<Record> records, Schema schema) {
-    List<MeasurementSchema> schemaList = new ArrayList<>();
+    List<IMeasurementSchema> schemaList = new ArrayList<>();
     for (int i = 0; i < schema.getFields().length; i++) {
       Map<String, String> props = new HashMap<>();
       props.put(Encoder.MAX_POINT_NUMBER, schema.getPrecision()[i] + "");
@@ -208,7 +209,7 @@ public class IoTDBManager implements IDataBaseManager {
 
   private void addToTextColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
     Binary[] sensor = (Binary[]) column;
-    sensor[rowIndex] = field != null ? new Binary((String) field) : Binary.EMPTY_VALUE;
+    sensor[rowIndex] = field != null ? new Binary(((String) field).getBytes()) : Binary.EMPTY_VALUE;
     if (field == null) {
       bitMap.mark(rowIndex);
     }

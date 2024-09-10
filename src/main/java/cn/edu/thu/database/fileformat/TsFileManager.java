@@ -12,27 +12,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import org.apache.iotdb.tsfile.encoding.encoder.Encoder;
-import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
-import org.apache.iotdb.tsfile.read.TsFileReader;
-import org.apache.iotdb.tsfile.read.TsFileSequenceReader;
-import org.apache.iotdb.tsfile.read.common.Path;
-import org.apache.iotdb.tsfile.read.expression.IExpression;
-import org.apache.iotdb.tsfile.read.expression.QueryExpression;
-import org.apache.iotdb.tsfile.read.expression.impl.SingleSeriesExpression;
-import org.apache.iotdb.tsfile.read.filter.TimeFilter;
-import org.apache.iotdb.tsfile.read.filter.operator.AndFilter;
-import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
-import org.apache.iotdb.tsfile.utils.Binary;
-import org.apache.iotdb.tsfile.utils.BitMap;
-import org.apache.iotdb.tsfile.write.TsFileWriter;
-import org.apache.iotdb.tsfile.write.record.NonAlignedTablet;
-import org.apache.iotdb.tsfile.write.record.TSRecord;
-import org.apache.iotdb.tsfile.write.record.Tablet;
-import org.apache.iotdb.tsfile.write.record.datapoint.DoubleDataPoint;
-import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
+import org.apache.tsfile.encoding.encoder.Encoder;
+import org.apache.tsfile.enums.TSDataType;
+import org.apache.tsfile.file.metadata.enums.CompressionType;
+import org.apache.tsfile.file.metadata.enums.TSEncoding;
+import org.apache.tsfile.utils.Binary;
+import org.apache.tsfile.utils.BitMap;
+import org.apache.tsfile.write.TsFileWriter;
+import org.apache.tsfile.write.record.TSRecord;
+import org.apache.tsfile.write.record.Tablet;
+import org.apache.tsfile.write.record.datapoint.DoubleDataPoint;
+import org.apache.tsfile.write.schema.IMeasurementSchema;
+import org.apache.tsfile.write.schema.MeasurementSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +31,7 @@ public class TsFileManager implements IDataBaseManager {
 
   private static Logger logger = LoggerFactory.getLogger(TsFileManager.class);
   private Map<String, TsFileWriter> tagWriterMap = new HashMap<>();
-  private Map<String, List<MeasurementSchema>> tagSchemasMap = new HashMap<>();
+  private Map<String, List<IMeasurementSchema>> tagSchemasMap = new HashMap<>();
   private String lastTag;
   private String filePath;
   private Config config;
@@ -97,8 +88,8 @@ public class TsFileManager implements IDataBaseManager {
     TsFileWriter writer = null;
     try {
       writer = new TsFileWriter(file);
-      Map<String, MeasurementSchema> template = new HashMap<>();
-      List<MeasurementSchema> schemas = new ArrayList<>();
+      Map<String, IMeasurementSchema> template = new HashMap<>();
+      List<IMeasurementSchema> schemas = new ArrayList<>();
 
       for (int i = 0; i < schema.getFields().length; i++) {
         Map<String, String> props = new HashMap<>();
@@ -161,22 +152,25 @@ public class TsFileManager implements IDataBaseManager {
     if (config.useAlignedTablet) {
       insertBatchAligned(records, writer, schema);
     } else {
-      insertBatchNonAligned(records, writer, schema);
+      // TODO NonAlignedTablet related
+//      insertBatchNonAligned(records, writer, schema);
+      logger.error("not supported mode: NonAlignedTablet");
     }
 
     lastTag = tag;
     return System.nanoTime() - start;
   }
 
-  private void insertBatchNonAligned(List<Record> records,
-      TsFileWriter writer, Schema schema) {
-    NonAlignedTablet tablet = convertToNonAlignedTablet(records, schema);
-    try {
-      writer.write(tablet);
-    } catch (Exception e) {
-      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
-    }
-  }
+  // TODO NonAlignedTablet related
+//  private void insertBatchNonAligned(List<Record> records,
+//      TsFileWriter writer, Schema schema) {
+//    NonAlignedTablet tablet = convertToNonAlignedTablet(records, schema);
+//    try {
+//      writer.write(tablet);
+//    } catch (Exception e) {
+//      logger.error("Insert {} records failed, schema {}, ", records.size(), schema, e);
+//    }
+//  }
 
   private void insertBatchAligned(List<Record> records,
       TsFileWriter writer, Schema schema) {
@@ -192,29 +186,30 @@ public class TsFileManager implements IDataBaseManager {
     }
   }
 
-  private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
-      Schema schema) {
-    String tag = records.get(0).tag;
-    List<MeasurementSchema> schemas = tagToMeasurementSchemas(tag);
-    NonAlignedTablet tablet = new NonAlignedTablet(tag, schemas,
-        records.size());
-    for (Record record : records) {
-      long timestamp = record.timestamp;
-      for (int i = 0; i < schema.getFields().length; i++) {
-        if (record.fields.get(i) != null) {
-          if (schema.getTypes()[i] != String.class) {
-            tablet.addValue(schemas.get(i).getMeasurementId(), timestamp, record.fields.get(i));
-          } else {
-            tablet.addValue(schemas.get(i).getMeasurementId(), timestamp,
-                new Binary((String) record.fields.get(i)));
-          }
-        }
-      }
-    }
-    return tablet;
-  }
+  // TODO NonAlignedTablet related
+//  private NonAlignedTablet convertToNonAlignedTablet(List<Record> records,
+//      Schema schema) {
+//    String tag = records.get(0).tag;
+//    List<MeasurementSchema> schemas = tagToMeasurementSchemas(tag);
+//    NonAlignedTablet tablet = new NonAlignedTablet(tag, schemas,
+//        records.size());
+//    for (Record record : records) {
+//      long timestamp = record.timestamp;
+//      for (int i = 0; i < schema.getFields().length; i++) {
+//        if (record.fields.get(i) != null) {
+//          if (schema.getTypes()[i] != String.class) {
+//            tablet.addValue(schemas.get(i).getMeasurementId(), timestamp, record.fields.get(i));
+//          } else {
+//            tablet.addValue(schemas.get(i).getMeasurementId(), timestamp,
+//                new Binary((String) record.fields.get(i)));
+//          }
+//        }
+//      }
+//    }
+//    return tablet;
+//  }
 
-  private List<MeasurementSchema> tagToMeasurementSchemas(String tag) {
+  private List<IMeasurementSchema> tagToMeasurementSchemas(String tag) {
     return tagSchemasMap.get(config.splitFileByDevice ? tag : Config.DEFAULT_TAG);
   }
 
@@ -270,7 +265,7 @@ public class TsFileManager implements IDataBaseManager {
   private void addToTextColumn(Object column, int rowIndex, Object field, BitMap bitMap) {
     Binary[] sensor = (Binary[]) column;
     if (field != null) {
-      sensor[rowIndex] = new Binary((String) field);
+      sensor[rowIndex] = new Binary(((String) field).getBytes());
       bitMap.mark(rowIndex);
     }
   }
