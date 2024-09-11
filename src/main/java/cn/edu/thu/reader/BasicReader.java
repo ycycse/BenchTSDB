@@ -8,6 +8,8 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
+import java.util.Collections;
 import java.util.NoSuchElementException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,10 +113,31 @@ public abstract class BasicReader implements Iterator<List<Record>> {
     if (!hasNext()) {
       throw new NoSuchElementException();
     }
+
+    // shuffle the list with 10% probability
+    if(randomChance()){
+      shuffleList();
+    }
+
     List<Record> records = convertCachedLinesToRecords();
 //    cachedLines.clear();
 
     return records;
+  }
+
+  /**
+   * return true with 10% probability
+   */
+  public boolean randomChance() {
+    Random random = new Random();
+    return random.nextDouble() < 0.1;
+  }
+
+  /**
+   * shuffle the cachedLines
+   */
+  public void shuffleList() {
+    Collections.shuffle(cachedLines);
   }
 
   /**
