@@ -115,9 +115,9 @@ public abstract class BasicReader implements Iterator<List<Record>> {
     }
 
     // shuffle the list with 10% probability
-    if(randomChance()){
-      shuffleList();
-    }
+//    if(randomChance()){
+//      shuffleList();
+//    }
 
     List<Record> records = convertCachedLinesToRecords();
 //    cachedLines.clear();
@@ -128,17 +128,18 @@ public abstract class BasicReader implements Iterator<List<Record>> {
   /**
    * return true with 10% probability
    */
-  public boolean randomChance() {
-    Random random = new Random();
-    return random.nextDouble() < 0.1;
-  }
+//  public boolean randomChance() {
+//    Random random = new Random();
+//    return random.nextDouble() < 0.1;
+//  }
 
   /**
    * shuffle the cachedLines
    */
-  public void shuffleList() {
-    Collections.shuffle(cachedLines);
-  }
+//  public void shuffleList() {
+//    Collections.shuffle(cachedLines);
+//  }
+
 
   /**
    * initialize when start reading a file

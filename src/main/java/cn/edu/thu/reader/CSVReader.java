@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +54,9 @@ public class CSVReader extends BasicReader {
   private DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
   private Map<String, Class<?>> typeMap;
 
-  public CSVReader(Config config, List<String> files) throws IOException {
+  private double stdDev;
+
+  public CSVReader(Config config, List<String> files, double stdDev) throws IOException {
     super(config, files);
     if (!config.TYPE_INFO_EXIST) {
       if (!config.splitFileByDevice) {
@@ -63,6 +66,7 @@ public class CSVReader extends BasicReader {
         logger.debug("The overall schema is: {}", overallSchema);
       }
     }
+    this.stdDev = stdDev;
   }
 
   private IndexedSchema collectSchemaFromFiles(List<String> files) {
@@ -445,6 +449,12 @@ public class CSVReader extends BasicReader {
     Record record;
     String[] split = line.split(config.CSV_SEPARATOR);
     long time = parseTime(split[0]);
+
+    // add a latency to create out-of-order for testing backward sort
+    Random random = new Random();
+    double randomGaussian = random.nextGaussian();  // 生成一个正态分布的随机数
+    time = time + (long) (this.stdDev * randomGaussian);
+
     String tag = currentFileSchema.getTag();
     List<Object> fields;
 

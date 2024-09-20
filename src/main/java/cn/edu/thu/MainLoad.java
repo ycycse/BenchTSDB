@@ -22,6 +22,7 @@ public class MainLoad {
   private static Logger logger = LoggerFactory.getLogger(MainLoad.class);
 
   public static void main(String[] args) throws Exception {
+    double stdDev = 1;
     long start = System.nanoTime();
     if (args == null || args.length == 0) {
       args = new String[]{"conf/config.properties"};
@@ -41,6 +42,10 @@ public class MainLoad {
       }
     } else {
       config = new Config();
+    }
+
+    if (args.length > 1) {
+      stdDev = Double.parseDouble(args[1]);
     }
 
     // init database
@@ -89,7 +94,7 @@ public class MainLoad {
     ExecutorService executorService = Executors.newFixedThreadPool(config.THREAD_NUM);
     for (int threadId = 0; threadId < config.THREAD_NUM; threadId++) {
       Thread thread = new Thread(
-          new RealDatasetWriter(config, thread_files.get(threadId), statistics));
+          new RealDatasetWriter(config, thread_files.get(threadId), statistics, stdDev));
       thread.setUncaughtExceptionHandler(handler);
       executorService.submit(thread);
     }

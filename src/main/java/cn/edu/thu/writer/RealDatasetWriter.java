@@ -26,7 +26,8 @@ public class RealDatasetWriter implements Runnable {
   private BasicReader reader;
   private final Statistics statistics;
 
-  public RealDatasetWriter(Config config, List<String> files, final Statistics statistics)
+  public RealDatasetWriter(Config config, List<String> files, final Statistics statistics,
+      double stdDev)
       throws IOException {
     this.database = DatabaseFactory.getDbManager(config);
     database.initClient();
@@ -34,6 +35,7 @@ public class RealDatasetWriter implements Runnable {
     this.statistics = statistics;
 
     logger.info("thread construct!, need to read {} files", files.size());
+    logger.info("stdDev=" + stdDev);
 
     switch (config.DATA_SET) {
       case "NOAA":
@@ -55,7 +57,7 @@ public class RealDatasetWriter implements Runnable {
         reader = new SyntheticReader(config);
         break;
       case "CSV":
-        reader = new CSVReader(config, files);
+        reader = new CSVReader(config, files, stdDev);
         break;
       default:
         throw new RuntimeException(config.DATA_SET + " not supported");
